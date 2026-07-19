@@ -41,6 +41,7 @@ type Me = {
     lastName: string;
     phone: string;
     avatar: string;
+    emailVerified: boolean;
   };
   profile: Profile;
 };
@@ -1192,6 +1193,35 @@ export default function AppPage() {
           {tab === "profile" && (
             <section className="animate-rise flex flex-1 flex-col">
               <h1 className="text-[24px] font-extrabold tracking-tight">Profile & settings</h1>
+
+              {me && !me.user.emailVerified && (
+                <Card className="mt-5 p-5" style={{ borderColor: "var(--amber-soft-border)" }}>
+                  <div className="text-[14px] font-extrabold">📧 Verify your email</div>
+                  <p className="mt-1 text-[13px] leading-relaxed" style={{ color: "var(--muted)" }}>
+                    Confirm your email so you can reset your password if you ever forget it. Check your inbox for the
+                    link — or send a new one.
+                  </p>
+                  <button
+                    onClick={async () => {
+                      setProfileSaved("");
+                      const r = await fetch("/api/auth/send-verify", { method: "POST" })
+                        .then((r) => r.json())
+                        .catch(() => null);
+                      setProfileSaved(r?.ok ? "Verification email sent ✓" : r?.error || "Could not send. Try again.");
+                      setTimeout(() => setProfileSaved(""), 4000);
+                    }}
+                    className="surface mt-3 w-full rounded-2xl border py-2.5 text-[13.5px] font-bold"
+                    style={{ color: "var(--ink-soft)" }}
+                  >
+                    Resend verification email
+                  </button>
+                  {profileSaved && (
+                    <p className="animate-rise mt-2 text-center text-[12.5px] font-bold" style={{ color: profileSaved.includes("✓") ? "var(--green)" : "var(--ember-deep)" }}>
+                      {profileSaved}
+                    </p>
+                  )}
+                </Card>
+              )}
 
               <Card className="mt-5 p-5">
                 <div className="flex items-center gap-4">

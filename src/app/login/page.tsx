@@ -206,9 +206,16 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-[13px] font-bold" style={{ color: "var(--ink-soft)" }}>
-                Password
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label htmlFor="password" className="block text-[13px] font-bold" style={{ color: "var(--ink-soft)" }}>
+                  Password
+                </label>
+                {mode === "login" && (
+                  <a href="/forgot" className="text-[12px] font-bold underline-offset-2 hover:underline" style={{ color: "var(--green)" }}>
+                    Forgot password?
+                  </a>
+                )}
+              </div>
               <div className="relative">
                 <input
                   id="password"

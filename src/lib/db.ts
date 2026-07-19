@@ -74,6 +74,14 @@ const DDL = `
     count INTEGER NOT NULL DEFAULT 0,
     reset_at INTEGER NOT NULL DEFAULT 0
   );
+  CREATE TABLE IF NOT EXISTS email_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    token_hash TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used INTEGER NOT NULL DEFAULT 0
+  );
 `;
 
 async function initDb(): Promise<Client> {
@@ -102,6 +110,7 @@ async function initDb(): Promise<Client> {
     "ALTER TABLE profiles ADD COLUMN debt_amount REAL NOT NULL DEFAULT 0",
     "ALTER TABLE profiles ADD COLUMN danger_hours TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0",
   ];
   for (const m of MIGRATIONS) {
     try {
