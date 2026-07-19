@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type Mode = "login" | "register";
 
@@ -19,10 +20,7 @@ function Logo() {
             fill="currentColor"
             opacity="0.35"
           />
-          <path
-            d="M7 13.5c2.8 0 6.2-1.4 8-4.5 0 5-3.4 8-8 8v-3.5Z"
-            fill="currentColor"
-          />
+          <path d="M7 13.5c2.8 0 6.2-1.4 8-4.5 0 5-3.4 8-8 8v-3.5Z" fill="currentColor" />
         </svg>
       </div>
       <div>
@@ -30,7 +28,7 @@ function Logo() {
           Bet<span style={{ color: "var(--green)" }}>Free</span>
         </div>
         <div className="mt-0.5 text-[11.5px] font-medium" style={{ color: "var(--muted)" }}>
-          tvoj put bez klađenja
+          your life after betting
         </div>
       </div>
     </div>
@@ -47,18 +45,18 @@ function SocialButton({ label, icon }: { label: string; icon: React.ReactNode })
           setNote(true);
           setTimeout(() => setNote(false), 2200);
         }}
-        className="flex w-full items-center justify-center gap-2.5 rounded-2xl border bg-white px-4 py-3 text-[14px] font-semibold transition hover:shadow-md active:scale-[0.98]"
-        style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}
+        className="surface flex w-full items-center justify-center gap-2.5 rounded-2xl border px-4 py-3 text-[14px] font-semibold transition hover:shadow-md active:scale-[0.98]"
+        style={{ color: "var(--ink-soft)" }}
       >
         {icon}
         {label}
       </button>
       {note && (
         <div
-          className="absolute -top-9 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-medium text-white"
-          style={{ background: "var(--ink)" }}
+          className="absolute -top-9 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-medium"
+          style={{ background: "var(--tooltip-bg)", color: "var(--tooltip-text)" }}
         >
-          Uskoro dostupno
+          Coming soon
         </div>
       )}
     </div>
@@ -87,60 +85,55 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Nešto je pošlo po zlu. Pokušaj ponovno.");
+        setError(data.error || "Something went wrong. Please try again.");
         setLoading(false);
         return;
       }
       router.push("/app");
       router.refresh();
     } catch {
-      setError("Ne mogu se spojiti na server. Provjeri vezu.");
+      setError("Can't reach the server. Check your connection.");
       setLoading(false);
     }
   }
 
   const inputCls =
-    "w-full rounded-2xl border bg-white px-4 py-3.5 text-[15px] font-medium outline-none transition placeholder:font-normal focus:ring-4";
-  const inputStyle = {
-    borderColor: "var(--line)",
-    color: "var(--ink)",
-  } as React.CSSProperties;
+    "surface w-full rounded-2xl border px-4 py-3.5 text-[15px] font-medium outline-none transition placeholder:font-normal focus:ring-4";
 
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-5 py-10">
-      {/* dekorativne mekane mrlje u pozadini */}
+      {/* soft decorative background blobs */}
       <div
         aria-hidden
         className="blob pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full opacity-60 blur-3xl"
-        style={{ background: "radial-gradient(circle, #cfe6d6 0%, transparent 70%)" }}
+        style={{ background: "radial-gradient(circle, var(--glow1) 0%, transparent 70%)" }}
       />
       <div
         aria-hidden
         className="blob pointer-events-none absolute -bottom-32 -left-24 h-[26rem] w-[26rem] rounded-full opacity-50 blur-3xl"
-        style={{ background: "radial-gradient(circle, #d3e2ea 0%, transparent 70%)", animationDelay: "-7s" }}
+        style={{ background: "radial-gradient(circle, var(--glow2) 0%, transparent 70%)", animationDelay: "-7s" }}
       />
 
       <div className="animate-rise relative w-full max-w-md">
         <div className="mb-7 flex items-center justify-between">
           <Logo />
-          <div
-            className="mono rounded-full border bg-white/70 px-3 py-1.5 text-[11px] font-semibold tracking-wide backdrop-blur"
-            style={{ borderColor: "var(--line)", color: "var(--green)" }}
-          >
-            100% ANONIMNO
+          <div className="flex items-center gap-2.5">
+            <div
+              className="mono rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-wide backdrop-blur"
+              style={{ borderColor: "var(--line)", color: "var(--green)", background: "var(--surface)" }}
+            >
+              100% PRIVATE
+            </div>
+            <ThemeToggle />
           </div>
         </div>
 
         <div
-          className="rounded-[28px] border bg-white/85 p-7 backdrop-blur-xl sm:p-8"
-          style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-soft)" }}
+          className="rounded-[28px] border p-7 backdrop-blur-xl sm:p-8"
+          style={{ borderColor: "var(--line)", background: "var(--surface)", boxShadow: "var(--shadow-soft)" }}
         >
-          {/* preklopnik prijava / registracija */}
-          <div
-            className="mb-7 grid grid-cols-2 rounded-2xl p-1"
-            style={{ background: "var(--bg2)" }}
-            role="tablist"
-          >
+          {/* sign in / sign up switch */}
+          <div className="mb-7 grid grid-cols-2 rounded-2xl p-1" style={{ background: "var(--bg2)" }} role="tablist">
             {(["login", "register"] as Mode[]).map((m) => (
               <button
                 key={m}
@@ -153,40 +146,40 @@ export default function LoginPage() {
                 className="rounded-xl py-2.5 text-[14px] font-bold transition"
                 style={
                   mode === m
-                    ? { background: "#fff", color: "var(--ink)", boxShadow: "var(--shadow-card)" }
+                    ? { background: "var(--surface-solid)", color: "var(--ink)", boxShadow: "var(--shadow-card)" }
                     : { color: "var(--muted)" }
                 }
               >
-                {m === "login" ? "Prijava" : "Registracija"}
+                {m === "login" ? "Sign in" : "Sign up"}
               </button>
             ))}
           </div>
 
           <h1 className="text-[26px] font-extrabold leading-tight tracking-tight">
-            {mode === "login" ? "Dobrodošao natrag." : "Prvi dan bez oklade."}
+            {mode === "login" ? "Welcome back." : "Day one starts here."}
           </h1>
           <p className="mt-1.5 text-[14.5px] leading-relaxed" style={{ color: "var(--muted)" }}>
             {mode === "login"
-              ? "Tvoj streak te čeka — nastavi gdje si stao."
-              : "Otvori račun i tvoj napredak se čuva na svim uređajima."}
+              ? "Your streak is waiting — pick up right where you left off."
+              : "Create an account and your progress follows you on every device."}
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-3.5">
             {mode === "register" && (
               <div>
                 <label htmlFor="name" className="mb-1.5 block text-[13px] font-bold" style={{ color: "var(--ink-soft)" }}>
-                  Ime ili nadimak
+                  Name or nickname
                 </label>
                 <input
                   id="name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Kako da te zovemo?"
+                  placeholder="What should we call you?"
                   autoComplete="nickname"
                   required
                   className={inputCls}
-                  style={{ ...inputStyle, ["--tw-ring-color" as string]: "var(--green-soft)" }}
+                  style={{ ["--tw-ring-color" as string]: "var(--green-soft)" }}
                 />
               </div>
             )}
@@ -200,17 +193,17 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="ti@email.com"
+                placeholder="you@email.com"
                 autoComplete="email"
                 required
                 className={inputCls}
-                style={{ ...inputStyle, ["--tw-ring-color" as string]: "var(--green-soft)" }}
+                style={{ ["--tw-ring-color" as string]: "var(--green-soft)" }}
               />
             </div>
 
             <div>
               <label htmlFor="password" className="mb-1.5 block text-[13px] font-bold" style={{ color: "var(--ink-soft)" }}>
-                Lozinka
+                Password
               </label>
               <div className="relative">
                 <input
@@ -218,17 +211,17 @@ export default function LoginPage() {
                   type={showPass ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === "register" ? "Barem 8 znakova" : "Tvoja lozinka"}
+                  placeholder={mode === "register" ? "At least 8 characters" : "Your password"}
                   autoComplete={mode === "login" ? "current-password" : "new-password"}
                   required
                   minLength={mode === "register" ? 8 : undefined}
                   className={inputCls + " pr-12"}
-                  style={{ ...inputStyle, ["--tw-ring-color" as string]: "var(--green-soft)" }}
+                  style={{ ["--tw-ring-color" as string]: "var(--green-soft)" }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  aria-label={showPass ? "Sakrij lozinku" : "Prikaži lozinku"}
+                  aria-label={showPass ? "Hide password" : "Show password"}
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 transition hover:bg-black/5"
                   style={{ color: "var(--muted)" }}
                 >
@@ -251,7 +244,7 @@ export default function LoginPage() {
               <div
                 role="alert"
                 className="animate-rise rounded-2xl border px-4 py-3 text-[13.5px] font-semibold"
-                style={{ background: "#fdf0ec", borderColor: "#f3cfc2", color: "var(--ember-deep)" }}
+                style={{ background: "var(--ember-soft)", borderColor: "var(--ember-soft-border)", color: "var(--ember-deep)" }}
               >
                 {error}
               </div>
@@ -266,18 +259,14 @@ export default function LoginPage() {
                 boxShadow: "0 8px 24px rgba(47, 122, 88, 0.35)",
               }}
             >
-              {loading
-                ? "Samo trenutak…"
-                : mode === "login"
-                  ? "Prijavi se"
-                  : "Kreni — besplatno je"}
+              {loading ? "One moment…" : mode === "login" ? "Sign in" : "Start free"}
             </button>
           </form>
 
           <div className="my-6 flex items-center gap-3.5">
             <div className="h-px flex-1" style={{ background: "var(--line)" }} />
             <span className="text-[12px] font-semibold" style={{ color: "var(--muted)" }}>
-              ili nastavi s
+              or continue with
             </span>
             <div className="h-px flex-1" style={{ background: "var(--line)" }} />
           </div>
@@ -305,25 +294,25 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-6 text-center text-[12px] leading-relaxed" style={{ color: "var(--muted)" }}>
-            Tvoji podaci su privatni i nikad se ne dijele.
+            Your data is private and never shared.
             <br />
-            Nastavkom prihvaćaš da BetFree nije zamjena za stručnu pomoć.
+            By continuing you accept that BetFree is not a substitute for professional help.
           </p>
         </div>
 
         <p className="mt-5 text-center text-[13px] font-semibold" style={{ color: "var(--muted)" }}>
           {mode === "login" ? (
             <>
-              Nemaš račun?{" "}
+              No account yet?{" "}
               <button onClick={() => setMode("register")} className="font-extrabold underline-offset-2 hover:underline" style={{ color: "var(--green)" }}>
-                Registriraj se
+                Sign up
               </button>
             </>
           ) : (
             <>
-              Već imaš račun?{" "}
+              Already have an account?{" "}
               <button onClick={() => setMode("login")} className="font-extrabold underline-offset-2 hover:underline" style={{ color: "var(--green)" }}>
-                Prijavi se
+                Sign in
               </button>
             </>
           )}

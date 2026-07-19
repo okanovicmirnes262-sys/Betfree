@@ -3,7 +3,10 @@
 :root {
   --bg: #f4f6f2;
   --bg2: #eaf0e9;
-  --surface: #ffffff;
+  --glow1: #dcebe0;
+  --glow2: #e4ecf0;
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-solid: #ffffff;
   --ink: #22312a;
   --ink-soft: #46564e;
   --muted: #7b8a81;
@@ -11,13 +14,52 @@
   --green: #2f7a58;
   --green-deep: #1f5a40;
   --green-soft: #e3f0e8;
+  --green-soft-border: #c4ddcf;
   --sea: #4e8ca6;
   --amber: #d9a441;
+  --amber-soft: #faf3e3;
+  --amber-soft-border: #ecd9ae;
+  --amber-text: #9a7420;
   --ember: #d96a48;
   --ember-deep: #b94f30;
+  --ember-soft: #fdf0ec;
+  --ember-soft-border: #f3cfc2;
+  --overlay: rgba(244, 246, 242, 0.97);
+  --tooltip-bg: #22312a;
+  --tooltip-text: #ffffff;
   --radius: 20px;
   --shadow-soft: 0 2px 6px rgba(34, 49, 42, 0.05), 0 12px 32px rgba(34, 49, 42, 0.08);
   --shadow-card: 0 1px 3px rgba(34, 49, 42, 0.05), 0 8px 24px rgba(34, 49, 42, 0.06);
+}
+
+html[data-theme="dark"] {
+  --bg: #0f1513;
+  --bg2: #0b100e;
+  --glow1: #18251e;
+  --glow2: #14202a;
+  --surface: rgba(24, 32, 26, 0.85);
+  --surface-solid: #182019;
+  --ink: #e8ede9;
+  --ink-soft: #c2cdc5;
+  --muted: #8a988f;
+  --line: #263029;
+  --green: #4caf82;
+  --green-deep: #2f7a58;
+  --green-soft: rgba(76, 175, 130, 0.14);
+  --green-soft-border: rgba(76, 175, 130, 0.35);
+  --amber: #d9a441;
+  --amber-soft: rgba(217, 164, 65, 0.12);
+  --amber-soft-border: rgba(217, 164, 65, 0.35);
+  --amber-text: #e0b96a;
+  --ember: #e07a55;
+  --ember-deep: #c05c3a;
+  --ember-soft: rgba(224, 122, 85, 0.12);
+  --ember-soft-border: rgba(224, 122, 85, 0.35);
+  --overlay: rgba(15, 21, 19, 0.97);
+  --tooltip-bg: #e8ede9;
+  --tooltip-text: #0f1513;
+  --shadow-soft: 0 2px 6px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 * {
@@ -32,18 +74,35 @@ body {
 body {
   margin: 0;
   font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
-  background:
-    radial-gradient(1100px 600px at 85% -10%, #dcebe0 0%, transparent 60%),
-    radial-gradient(900px 500px at -10% 100%, #e4ecf0 0%, transparent 55%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
-  background-attachment: fixed;
+  background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* viewport-anchored background that stays put while scrolling */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(1100px 600px at 85% -10%, var(--glow1) 0%, transparent 60%),
+    radial-gradient(900px 500px at -10% 100%, var(--glow2) 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+  transition: background 0.3s ease;
 }
 
 .mono {
   font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
+}
+
+/* themable surface — replaces hardcoded bg-white */
+.surface {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
 }
 
 @keyframes rise {
@@ -97,6 +156,6 @@ body {
 }
 
 input:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 40px #fff inset;
+  -webkit-box-shadow: 0 0 0 40px var(--surface-solid) inset;
   -webkit-text-fill-color: var(--ink);
 }

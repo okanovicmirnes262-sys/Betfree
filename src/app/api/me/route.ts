@@ -10,10 +10,10 @@ export async function GET() {
       args: [session.userId],
     });
     const user = userRes.rows[0];
-    if (!user) return NextResponse.json({ error: "Korisnik ne postoji" }, { status: 404 });
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     const profRes = await query({
-      sql: "SELECT weekly_spend, risk_score, quiz_done, quit_start, urges FROM profiles WHERE user_id = ?",
+      sql: "SELECT weekly_spend, risk_score, quiz_done, quit_start, urges, currency, goal_name, goal_amount, relapses FROM profiles WHERE user_id = ?",
       args: [session.userId],
     });
     const p = profRes.rows[0];
@@ -26,11 +26,15 @@ export async function GET() {
             quizDone: Number(p.quiz_done) === 1,
             quitStart: p.quit_start ? String(p.quit_start) : null,
             urges: Number(p.urges),
+            currency: String(p.currency || "EUR"),
+            goalName: String(p.goal_name || ""),
+            goalAmount: Number(p.goal_amount || 0),
+            relapses: Number(p.relapses || 0),
           }
         : null,
     });
   } catch (e) {
     if (e instanceof Response) return e;
-    return NextResponse.json({ error: "Greška na serveru" }, { status: 500 });
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

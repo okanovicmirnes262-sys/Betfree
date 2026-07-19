@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 
+const CURRENCIES = ["EUR", "USD", "GBP"];
+
 export async function PUT(req: NextRequest) {
   try {
     const session = await requireAuth();
@@ -23,16 +25,29 @@ export async function PUT(req: NextRequest) {
       fields.push("quiz_done = ?");
       args.push(body.quizDone ? 1 : 0);
     }
+    if (typeof body.currency === "string" && CURRENCIES.includes(body.currency)) {
+      fields.push("currency = ?");
+      args.push(body.currency);
+    }
+    if (typeof body.goalName === "string") {
+      fields.push("goal_name = ?");
+      args.push(body.goalName.trim().slice(0, 60));
+    }
+    if (typeof body.goalAmount === "number" && body.goalAmount >= 0 && body.goalAmount <= 10000000) {
+      fields.push("goal_amount = ?");
+      args.push(body.goalAmount);
+    }
     if (body.quitStart === "now") {
       fields.push("quit_start = COALESCE(quit_start, ?)");
       args.push(now);
-    } else if (body.quitStart === "reset") {
-      fields.push("quit_start = ?");
+    }
+    if (body.relapse === true) {
+      fields.push("quit_start = ?", "relapses = relapses + 1");
       args.push(now);
     }
 
     if (fields.length === 0)
-      return NextResponse.json({ error: "Nema ničega za spremiti" }, { status: 400 });
+      return NextResponse.json({ error: "Nothing to save" }, { status: 400 });
 
     fields.push("updated_at = ?");
     args.push(now, session.userId);
@@ -43,6 +58,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof Response) return e;
-    return NextResponse.json({ error: "Greška na serveru" }, { status: 500 });
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

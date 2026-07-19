@@ -2,19 +2,33 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BetFree — Prestani se kladiti",
+  title: "BetFree — Quit gambling for good",
   description:
-    "Prestani se kladiti uz BetFree: brojač dana, ušteđeni novac, panic button i plan prestanka.",
+    "Quit betting with BetFree: day counter, money saved live, panic button, daily motivation and a personal quit plan.",
 };
 
 export const viewport: Viewport = {
   themeColor: "#f4f6f2",
 };
 
+// Resolves the theme before first paint to avoid a flash of the wrong theme.
+const themeScript = `
+(function(){
+  try {
+    var t = localStorage.getItem('bf-theme');
+    if (t !== 'light' && t !== 'dark') {
+      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="hr">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

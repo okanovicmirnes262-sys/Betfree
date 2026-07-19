@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const pass = String(password || "");
 
     if (!cleanEmail || !pass)
-      return NextResponse.json({ error: "Unesi email i lozinku." }, { status: 400 });
+      return NextResponse.json({ error: "Enter your email and password." }, { status: 400 });
 
     const res = await query({
       sql: "SELECT id, email, password_hash, name FROM users WHERE email = ?",
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     });
     const user = res.rows[0];
     if (!user || !(await bcrypt.compare(pass, String(user.password_hash))))
-      return NextResponse.json({ error: "Pogrešan email ili lozinka." }, { status: 401 });
+      return NextResponse.json({ error: "Wrong email or password." }, { status: 401 });
 
     await setSessionCookie({ userId: Number(user.id), email: cleanEmail });
     return NextResponse.json({
@@ -26,6 +26,6 @@ export async function POST(req: NextRequest) {
       user: { id: Number(user.id), name: String(user.name), email: cleanEmail },
     });
   } catch {
-    return NextResponse.json({ error: "Greška na serveru. Pokušaj ponovno." }, { status: 500 });
+    return NextResponse.json({ error: "Server error. Please try again." }, { status: 500 });
   }
 }
