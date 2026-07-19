@@ -232,7 +232,7 @@ export default function AppPage() {
   const message = dailyMessage(streakDays);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-10 pt-7">
+    <main className="safe-main mx-auto flex min-h-dvh w-full max-w-md flex-col">
       {/* WELCOME */}
       {screen === "welcome" && (
         <section className="animate-rise flex flex-1 flex-col">
@@ -249,7 +249,7 @@ export default function AppPage() {
             <div className="mono mb-3 text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--green)" }}>
               10-question test · 2 minutes
             </div>
-            <h1 className="text-[32px] font-extrabold leading-[1.1] tracking-tight">
+            <h1 className="hero-title font-extrabold leading-[1.1] tracking-tight">
               {me ? `${me.user.name}, what` : "What"} is betting really costing you?
             </h1>
             <p className="mt-3 text-[15.5px] leading-relaxed" style={{ color: "var(--muted)" }}>
@@ -324,7 +324,7 @@ export default function AppPage() {
             <div className="mono mt-4 text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--green)" }}>
               Your projection
             </div>
-            <div className="mono mt-1 text-[50px] font-semibold leading-none tracking-tight" style={{ color: "var(--ember-deep)" }}>
+            <div className="mono loss-num mt-1 font-semibold leading-none tracking-tight" style={{ color: "var(--ember-deep)" }}>
               {fmtMoney(animLoss, currency)}
             </div>
             <div className="mt-1.5 text-[14px]" style={{ color: "var(--muted)" }}>
@@ -384,8 +384,8 @@ export default function AppPage() {
         <section className="animate-rise flex flex-1 flex-col">
           <div className="flex items-center justify-between">
             <Brand />
-            <div className="flex items-center gap-2.5">
-              <div className="mono text-[12px] font-semibold" style={{ color: "var(--muted)" }}>
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="mono hidden whitespace-nowrap text-[12px] font-semibold min-[420px]:block" style={{ color: "var(--muted)" }}>
                 {new Date(now).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
               </div>
               <ThemeToggle />
@@ -400,7 +400,7 @@ export default function AppPage() {
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
                 </svg>
               </button>
-              <button onClick={logout} className="text-[13px] font-bold" style={{ color: "var(--muted)" }}>
+              <button onClick={logout} className="whitespace-nowrap text-[13px] font-bold" style={{ color: "var(--muted)" }}>
                 Sign out
               </button>
             </div>
@@ -415,7 +415,7 @@ export default function AppPage() {
             return (
               <>
                 <div className="pt-8 pb-2 text-center">
-                  <div className="mono text-[54px] font-semibold leading-none tracking-tight">
+                  <div className="mono streak-num font-semibold leading-none tracking-tight">
                     {streakDays}d {h}:{m}:{sec}
                   </div>
                   <div className="mt-2 text-[14px] font-semibold" style={{ color: "var(--muted)" }}>
@@ -442,7 +442,7 @@ export default function AppPage() {
                   className="mt-3.5 rounded-3xl p-6 text-center text-white"
                   style={{ background: "linear-gradient(135deg, var(--green-deep), var(--green))", boxShadow: "0 12px 32px rgba(31,90,64,0.35)" }}
                 >
-                  <div className="mono text-[38px] font-semibold leading-none">
+                  <div className="mono saved-num font-semibold leading-none">
                     {fmtMoney(saved, currency, 2)}
                   </div>
                   <div className="mt-1.5 text-[13px] font-medium" style={{ color: "#cde9da" }}>
@@ -479,7 +479,7 @@ export default function AppPage() {
                 </div>
 
                 {/* milestones */}
-                <div className="mt-3.5 flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                <div className="no-scrollbar mt-3.5 flex gap-2 overflow-x-auto pb-1">
                   {milestones(streakDays).map((ms) => (
                     <div
                       key={ms.days}
@@ -550,7 +550,7 @@ export default function AppPage() {
       {sheet && (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/30 backdrop-blur-sm" onClick={() => setSheet("")}>
           <div
-            className="animate-rise max-h-[80dvh] w-full max-w-md overflow-auto rounded-t-[28px] p-6 pb-9"
+            className="safe-sheet animate-rise max-h-[85dvh] w-full max-w-md overflow-auto overscroll-contain rounded-t-[28px] p-6"
             style={{ background: "var(--surface-solid)", boxShadow: "0 -12px 40px rgba(0,0,0,0.25)" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -734,15 +734,16 @@ export default function AppPage() {
                     value={goalName}
                     onChange={(e) => setGoalName(e.target.value)}
                     placeholder="Goal name (e.g. Trip to Italy)"
-                    className="surface mt-2.5 w-full rounded-2xl border px-4 py-3 text-[14px] font-medium outline-none"
+                    className="surface mt-2.5 w-full rounded-2xl border px-4 py-3 font-medium outline-none"
                   />
                   <input
                     type="number"
                     min={0}
+                    inputMode="decimal"
                     value={goalAmount || ""}
                     onChange={(e) => setGoalAmount(Number(e.target.value) || 0)}
                     placeholder="Amount"
-                    className="surface mt-2 w-full rounded-2xl border px-4 py-3 text-[14px] font-medium outline-none"
+                    className="surface mt-2 w-full rounded-2xl border px-4 py-3 font-medium outline-none"
                   />
                   <button
                     onClick={() => {
@@ -826,13 +827,13 @@ function PanicOverlay({ onClose }: { onClose: (won: boolean) => void }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center px-8 text-center" style={{ background: "var(--overlay)" }}>
+    <div className="safe-overlay fixed inset-0 z-50 flex flex-col items-center justify-center overflow-y-auto px-8 text-center" style={{ background: "var(--overlay)" }}>
       <div className="mono text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--green)" }}>
         An urge lasts 15–20 minutes. This will pass.
       </div>
       <div className="mono mt-3 text-[32px] font-semibold">{t === 0 ? "0:00 ✓" : `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`}</div>
       <div
-        className="breathe my-8 flex h-40 w-40 items-center justify-center rounded-full text-[15px] font-bold"
+        className="breathe my-7 flex h-32 w-32 flex-shrink-0 items-center justify-center rounded-full text-[15px] font-bold sm:h-40 sm:w-40"
         style={{
           background: "radial-gradient(circle, rgba(47,122,88,0.25), rgba(47,122,88,0.05))",
           border: "2px solid var(--green)",

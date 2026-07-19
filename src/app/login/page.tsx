@@ -98,10 +98,10 @@ export default function LoginPage() {
   }
 
   const inputCls =
-    "surface w-full rounded-2xl border px-4 py-3.5 text-[15px] font-medium outline-none transition placeholder:font-normal focus:ring-4";
+    "surface w-full rounded-2xl border px-4 py-3.5 font-medium outline-none transition placeholder:font-normal focus:ring-4";
 
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-5 py-10">
+    <main className="safe-main relative flex min-h-dvh items-center justify-center overflow-hidden">
       {/* soft decorative background blobs */}
       <div
         aria-hidden
@@ -129,7 +129,7 @@ export default function LoginPage() {
         </div>
 
         <div
-          className="rounded-[28px] border p-7 backdrop-blur-xl sm:p-8"
+          className="rounded-[28px] border p-6 backdrop-blur-xl sm:p-8"
           style={{ borderColor: "var(--line)", background: "var(--surface)", boxShadow: "var(--shadow-soft)" }}
         >
           {/* sign in / sign up switch */}
