@@ -12,6 +12,10 @@ const DDL = `
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     name TEXT NOT NULL,
+    first_name TEXT NOT NULL DEFAULT '',
+    last_name TEXT NOT NULL DEFAULT '',
+    phone TEXT NOT NULL DEFAULT '',
+    avatar TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS profiles (
@@ -57,6 +61,10 @@ async function initDb(): Promise<Client> {
     "ALTER TABLE profiles ADD COLUMN goal_name TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE profiles ADD COLUMN goal_amount REAL NOT NULL DEFAULT 0",
     "ALTER TABLE profiles ADD COLUMN relapses INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN first_name TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN last_name TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN phone TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT ''",
   ];
   for (const m of MIGRATIONS) {
     try {
