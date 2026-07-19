@@ -40,6 +40,35 @@ const DDL = `
     created_at TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
+  CREATE TABLE IF NOT EXISTS user_reasons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS user_checkins (
+    user_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    mood INTEGER NOT NULL,
+    had_urge INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, day)
+  );
+  CREATE TABLE IF NOT EXISTS community_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    nickname TEXT NOT NULL,
+    streak_days INTEGER NOT NULL DEFAULT 0,
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS post_reactions (
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    PRIMARY KEY (post_id, user_id, kind)
+  );
 `;
 
 async function initDb(): Promise<Client> {
@@ -65,6 +94,8 @@ async function initDb(): Promise<Client> {
     "ALTER TABLE users ADD COLUMN last_name TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE users ADD COLUMN phone TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE profiles ADD COLUMN debt_amount REAL NOT NULL DEFAULT 0",
+    "ALTER TABLE profiles ADD COLUMN danger_hours TEXT NOT NULL DEFAULT ''",
   ];
   for (const m of MIGRATIONS) {
     try {
