@@ -240,8 +240,16 @@ export default function AppPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [profileSaved, setProfileSaved] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // save-confirmation toast
+  const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notify = useCallback((text: string, error = false) => {
+    setToast({ text, error });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2600);
+  }, []);
 
   // recovery features
   const [reasons, setReasons] = useState<Reason[]>([]);
@@ -252,6 +260,8 @@ export default function AppPage() {
   const [newPost, setNewPost] = useState("");
   const [postErr, setPostErr] = useState("");
   const [retryUntil, setRetryUntil] = useState(0);
+  const [customTrigger, setCustomTrigger] = useState("");
+  const [verifyMsg, setVerifyMsg] = useState("");
   const [hiddenPosts, setHiddenPosts] = useState<number[]>([]);
   const [debtAmount, setDebtAmount] = useState(0);
   const [dangerDays, setDangerDays] = useState<number[]>([]);
@@ -350,12 +360,17 @@ export default function AppPage() {
     return () => cancelAnimationFrame(raf);
   }, [screen, fiveYr]);
 
-  const saveProfile = useCallback((body: Record<string, unknown>) => {
-    return fetch("/api/profile", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }).catch(() => {});
+  const saveProfile = useCallback(async (body: Record<string, unknown>) => {
+    try {
+      const r = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return r.ok;
+    } catch {
+      return false;
+    }
   }, []);
 
   function answer(opt: Option) {
@@ -388,6 +403,7 @@ export default function AppPage() {
     if (r?.urges != null) setUrges(r.urges);
     else setUrges((u) => u + 1);
     setHistory(null);
+    notify("Urge logged — that's a win 💪");
   }
 
   async function confirmSlip() {
@@ -398,19 +414,17 @@ export default function AppPage() {
   }
 
   async function saveAccount(extra: Record<string, unknown> = {}) {
-    setProfileSaved("");
     const res = await fetch("/api/account", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ firstName, lastName, phone, ...extra }),
     }).then((r) => r.json()).catch(() => null);
     if (res?.ok) {
-      setProfileSaved("Saved ✓");
       await loadMe();
-      setTimeout(() => setProfileSaved(""), 2500);
-    } else {
-      setProfileSaved(res?.error || "Could not save. Try again.");
+      return true;
     }
+    notify(res?.error || "Could not save. Try again.", true);
+    return false;
   }
 
   function pickAvatar(file: File) {
@@ -429,7 +443,9 @@ export default function AppPage() {
         const min = Math.min(img.width, img.height);
         ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, size, size);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-        saveAccount({ avatar: dataUrl });
+        saveAccount({ avatar: dataUrl }).then((ok) => {
+          if (ok) notify("Profile photo updated 📸");
+        });
       };
       img.src = String(reader.result);
     };
@@ -445,6 +461,7 @@ export default function AppPage() {
     }).catch(() => {});
     const r = await fetch("/api/checkin").then((r) => r.json()).catch(() => null);
     if (r) setCheckins(r.entries ?? []);
+    notify("Check-in saved — see you tomorrow 🌱");
   }
 
   async function addReason() {
@@ -456,7 +473,12 @@ export default function AppPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     }).then((r) => r.json()).catch(() => null);
-    if (r?.ok) setReasons((prev) => [...prev, { id: r.id, text }]);
+    if (r?.ok) {
+      setReasons((prev) => [...prev, { id: r.id, text }]);
+      notify("Reason added ✍️");
+    } else {
+      notify(r?.error || "Could not save. Try again.", true);
+    }
   }
 
   async function delReason(id: number) {
@@ -502,9 +524,10 @@ export default function AppPage() {
     }).catch(() => {});
   }
 
-  function saveDangerHours(days: number[], from: number, to: number) {
+  async function saveDangerHours(days: number[], from: number, to: number) {
     const value = days.length === 0 ? "" : JSON.stringify({ days, from, to });
-    saveProfile({ dangerHours: value });
+    const ok = await saveProfile({ dangerHours: value });
+    notify(ok ? "Risky hours saved ⚠️" : "Could not save. Try again.", !ok);
   }
 
   async function logout() {
@@ -554,6 +577,11 @@ export default function AppPage() {
 
   return (
     <main className={"safe-main mx-auto flex min-h-dvh w-full max-w-md flex-col" + (screen === "dash" ? " with-nav" : "")}>
+      {toast && (
+        <div className={"toast" + (toast.error ? " error" : "")} role="status">
+          {toast.text}
+        </div>
+      )}
       {/* WELCOME */}
       {screen === "welcome" && (
         <section className="animate-rise flex flex-1 flex-col">
@@ -1216,21 +1244,21 @@ export default function AppPage() {
                   </p>
                   <button
                     onClick={async () => {
-                      setProfileSaved("");
+                      setVerifyMsg("");
                       const r = await fetch("/api/auth/send-verify", { method: "POST" })
                         .then((r) => r.json())
                         .catch(() => null);
-                      setProfileSaved(r?.ok ? "Verification email sent ✓" : r?.error || "Could not send. Try again.");
-                      setTimeout(() => setProfileSaved(""), 4000);
+                      setVerifyMsg(r?.ok ? "Verification email sent ✓" : r?.error || "Could not send. Try again.");
+                      setTimeout(() => setVerifyMsg(""), 4000);
                     }}
                     className="surface mt-3 w-full rounded-2xl border py-2.5 text-[13.5px] font-bold"
                     style={{ color: "var(--ink-soft)" }}
                   >
                     Resend verification email
                   </button>
-                  {profileSaved && (
-                    <p className="animate-rise mt-2 text-center text-[12.5px] font-bold" style={{ color: profileSaved.includes("✓") ? "var(--green)" : "var(--ember-deep)" }}>
-                      {profileSaved}
+                  {verifyMsg && (
+                    <p className="animate-rise mt-2 text-center text-[12.5px] font-bold" style={{ color: verifyMsg.includes("✓") ? "var(--green)" : "var(--ember-deep)" }}>
+                      {verifyMsg}
                     </p>
                   )}
                 </Card>
@@ -1293,18 +1321,15 @@ export default function AppPage() {
                   </label>
                   <input id="ph" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+385 ..." className={inputCls} />
                 </div>
-                <button
-                  onClick={() => saveAccount()}
-                  className="mt-4 w-full rounded-2xl py-3 text-[14px] font-extrabold text-white"
-                  style={{ background: "linear-gradient(135deg, var(--green), var(--green-deep))" }}
-                >
-                  Save profile
-                </button>
-                {profileSaved && (
-                  <p className="animate-rise mt-2.5 text-center text-[13px] font-bold" style={{ color: profileSaved === "Saved ✓" ? "var(--green)" : "var(--ember-deep)" }}>
-                    {profileSaved}
-                  </p>
-                )}
+                <SaveButton
+                  label="Save profile"
+                  variant="primary"
+                  onSave={async () => {
+                    const ok = await saveAccount();
+                    if (ok) notify("Profile saved ✓");
+                    return ok;
+                  }}
+                />
               </Card>
 
               <Card className="mt-3 p-5">
@@ -1315,9 +1340,10 @@ export default function AppPage() {
                   {CURRENCIES.map((c) => (
                     <button
                       key={c.code}
-                      onClick={() => {
+                      onClick={async () => {
                         setCurrency(c.code);
-                        saveProfile({ currency: c.code });
+                        const ok = await saveProfile({ currency: c.code });
+                        notify(ok ? `Currency set to ${c.symbol} ${c.code}` : "Could not save. Try again.", !ok);
                       }}
                       className="mono flex-1 rounded-2xl border py-2.5 text-[14px] font-semibold transition"
                       style={
@@ -1344,13 +1370,14 @@ export default function AppPage() {
                   placeholder="Amount"
                   className={inputCls + " mt-2"}
                 />
-                <button
-                  onClick={() => saveProfile({ goalName, goalAmount })}
-                  className="surface mt-3 w-full rounded-2xl border py-3 text-[14px] font-bold"
-                  style={{ color: "var(--ink-soft)" }}
-                >
-                  Save goal
-                </button>
+                <SaveButton
+                  label="Save goal"
+                  onSave={async () => {
+                    const ok = await saveProfile({ goalName, goalAmount });
+                    notify(ok ? "Goal saved — watch it fill up on Home 🎯" : "Could not save. Try again.", !ok);
+                    return ok;
+                  }}
+                />
               </Card>
 
               <Card className="mt-3 p-5">
@@ -1406,13 +1433,14 @@ export default function AppPage() {
                   placeholder="Total debt amount"
                   className={inputCls}
                 />
-                <button
-                  onClick={() => saveProfile({ debtAmount })}
-                  className="surface mt-3 w-full rounded-2xl border py-3 text-[14px] font-bold"
-                  style={{ color: "var(--ink-soft)" }}
-                >
-                  Save debt
-                </button>
+                <SaveButton
+                  label="Save debt"
+                  onSave={async () => {
+                    const ok = await saveProfile({ debtAmount });
+                    notify(ok ? "Debt saved — your debt-free date is on Home 💰" : "Could not save. Try again.", !ok);
+                    return ok;
+                  }}
+                />
               </Card>
 
               <Card className="mt-3 p-5">
@@ -1544,6 +1572,38 @@ export default function AppPage() {
                     </button>
                   ))}
                 </div>
+                <div className="mt-3">
+                  <div className="mb-1.5 text-[12.5px] font-bold" style={{ color: "var(--muted)" }}>
+                    Something else? Write your own trigger:
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customTrigger}
+                      onChange={(e) => setCustomTrigger(e.target.value.slice(0, 80))}
+                      placeholder='e.g. "Saw my old betting buddy"'
+                      className="surface flex-1 rounded-2xl border px-4 py-3 font-medium outline-none"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && customTrigger.trim()) {
+                          logUrge(customTrigger.trim());
+                          setCustomTrigger("");
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        if (!customTrigger.trim()) return;
+                        logUrge(customTrigger.trim());
+                        setCustomTrigger("");
+                      }}
+                      disabled={!customTrigger.trim()}
+                      className="rounded-2xl px-4 text-[14px] font-extrabold text-white disabled:opacity-40"
+                      style={{ background: "linear-gradient(135deg, var(--green), var(--green-deep))" }}
+                    >
+                      Log
+                    </button>
+                  </div>
+                </div>
                 {logged && (
                   <div
                     className="animate-rise mt-4 rounded-2xl border px-4 py-3 text-[14px] font-semibold"
@@ -1595,6 +1655,59 @@ export default function AppPage() {
 }
 
 /* ---------------- panic overlay ---------------- */
+
+/**
+ * Save button with visible state: idle -> amber "Saving…" -> green "Saved ✓",
+ * then back to idle. Disabled while in flight.
+ */
+function SaveButton({
+  label,
+  onSave,
+  variant = "ghost",
+}: {
+  label: string;
+  onSave: () => Promise<boolean>;
+  variant?: "ghost" | "primary";
+}) {
+  const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
+
+  async function click() {
+    if (state !== "idle") return;
+    setState("saving");
+    const ok = await onSave();
+    if (ok) {
+      setState("saved");
+      setTimeout(() => setState("idle"), 1800);
+    } else {
+      setState("idle");
+    }
+  }
+
+  let style: React.CSSProperties;
+  let text = label;
+  if (state === "saving") {
+    text = "Saving…";
+    style = { background: "var(--amber-soft)", color: "var(--amber-text)", border: "1px solid var(--amber-soft-border)" };
+  } else if (state === "saved") {
+    text = "Saved ✓";
+    style = { background: "linear-gradient(135deg, var(--green), var(--green-deep))", color: "#fff", border: "1px solid transparent" };
+  } else if (variant === "primary") {
+    style = { background: "linear-gradient(135deg, var(--green), var(--green-deep))", color: "#fff", border: "1px solid transparent" };
+  } else {
+    style = { background: "var(--surface)", color: "var(--ink-soft)", border: "1px solid var(--line)" };
+  }
+
+  return (
+    <button
+      onClick={click}
+      disabled={state !== "idle"}
+      className="mt-3 w-full rounded-2xl py-3 text-[14px] font-extrabold transition-all duration-300 active:scale-[0.98]"
+      style={style}
+    >
+      {text}
+    </button>
+  );
+}
 
 function CooldownMsg({ until, onDone }: { until: number; onDone: () => void }) {
   const [left, setLeft] = useState(() => Math.max(0, Math.ceil((until - Date.now()) / 1000)));
