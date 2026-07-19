@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f4f6f2;
-  --bg2: #eaf0e9;
-  --glow1: #dcebe0;
-  --glow2: #e4ecf0;
-  --surface: rgba(255, 255, 255, 0.85);
+  --bg: #f1f2f4;
+  --bg2: #eceef0;
+  --glow1: #e4ebe6;
+  --glow2: #e6eaee;
+  --surface: #ffffff;
   --surface-solid: #ffffff;
-  --ink: #22312a;
-  --ink-soft: #46564e;
-  --muted: #7b8a81;
-  --line: #e2e8e0;
+  --ink: #1a211d;
+  --ink-soft: #414b45;
+  --muted: #79837c;
+  --line: #e6e8e7;
   --green: #2f7a58;
   --green-deep: #1f5a40;
-  --green-soft: #e3f0e8;
-  --green-soft-border: #c4ddcf;
+  --green-soft: #e6f1ea;
+  --green-soft-border: #c8ded1;
   --sea: #4e8ca6;
   --amber: #d9a441;
   --amber-soft: #faf3e3;
@@ -24,25 +24,30 @@
   --ember-deep: #b94f30;
   --ember-soft: #fdf0ec;
   --ember-soft-border: #f3cfc2;
-  --overlay: rgba(244, 246, 242, 0.97);
-  --tooltip-bg: #22312a;
+  --overlay: rgba(241, 242, 244, 0.97);
+  --tooltip-bg: #1a211d;
   --tooltip-text: #ffffff;
+  --nav-bg: #16191b;
+  --nav-icon: #8b9490;
+  --nav-active: #ffffff;
+  --nav-pill: #2f7a58;
   --radius: 20px;
-  --shadow-soft: 0 2px 6px rgba(34, 49, 42, 0.05), 0 12px 32px rgba(34, 49, 42, 0.08);
-  --shadow-card: 0 1px 3px rgba(34, 49, 42, 0.05), 0 8px 24px rgba(34, 49, 42, 0.06);
+  --shadow-soft: 0 2px 6px rgba(26, 33, 29, 0.05), 0 12px 32px rgba(26, 33, 29, 0.09);
+  --shadow-card: 0 1px 2px rgba(26, 33, 29, 0.04), 0 8px 24px rgba(26, 33, 29, 0.06);
+  --shadow-nav: 0 10px 30px rgba(16, 20, 18, 0.35);
 }
 
 html[data-theme="dark"] {
-  --bg: #0f1513;
-  --bg2: #0b100e;
-  --glow1: #18251e;
-  --glow2: #14202a;
-  --surface: rgba(24, 32, 26, 0.85);
-  --surface-solid: #182019;
-  --ink: #e8ede9;
-  --ink-soft: #c2cdc5;
-  --muted: #8a988f;
-  --line: #263029;
+  --bg: #101312;
+  --bg2: #0c0f0e;
+  --glow1: #17201b;
+  --glow2: #141c20;
+  --surface: #1a1f1c;
+  --surface-solid: #1a1f1c;
+  --ink: #e9edeb;
+  --ink-soft: #c3cbc6;
+  --muted: #89938d;
+  --line: #272d29;
   --green: #4caf82;
   --green-deep: #2f7a58;
   --green-soft: rgba(76, 175, 130, 0.14);
@@ -55,11 +60,16 @@ html[data-theme="dark"] {
   --ember-deep: #c05c3a;
   --ember-soft: rgba(224, 122, 85, 0.12);
   --ember-soft-border: rgba(224, 122, 85, 0.35);
-  --overlay: rgba(15, 21, 19, 0.97);
-  --tooltip-bg: #e8ede9;
-  --tooltip-text: #0f1513;
+  --overlay: rgba(16, 19, 18, 0.97);
+  --tooltip-bg: #e9edeb;
+  --tooltip-text: #101312;
+  --nav-bg: #060f0b;
+  --nav-icon: #79837d;
+  --nav-active: #ffffff;
+  --nav-pill: #2f7a58;
   --shadow-soft: 0 2px 6px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.4);
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-nav: 0 10px 30px rgba(0, 0, 0, 0.55);
 }
 
 * {
@@ -178,7 +188,8 @@ textarea {
 
 /* fluid type for the big numbers so they never overflow small phones */
 .streak-num {
-  font-size: clamp(34px, 12.5vw, 54px);
+  font-size: clamp(28px, 9vw, 42px);
+  white-space: nowrap;
 }
 
 .saved-num {
@@ -223,4 +234,48 @@ textarea {
   .safe-main {
     padding-top: calc(3rem + env(safe-area-inset-top));
   }
+}
+
+/* room for the floating bottom nav */
+.with-nav {
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+}
+
+/* floating pill bottom navigation (TripGlide-style) */
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(0.9rem + env(safe-area-inset-bottom));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem;
+  border-radius: 999px;
+  background: var(--nav-bg);
+  box-shadow: var(--shadow-nav);
+}
+
+.bottom-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--nav-icon);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.bottom-nav button:active {
+  transform: scale(0.94);
+}
+
+.bottom-nav button.active {
+  background: var(--nav-pill);
+  color: var(--nav-active);
 }

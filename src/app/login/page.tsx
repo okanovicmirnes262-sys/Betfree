@@ -9,20 +9,8 @@ type Mode = "login" | "register";
 function Logo() {
   return (
     <div className="flex items-center gap-3">
-      <div
-        className="flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-md"
-        style={{ background: "linear-gradient(135deg, var(--green) 0%, var(--green-deep) 100%)" }}
-        aria-hidden
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 21c4.5-3.2 8-6.6 8-10.6C20 6.4 17.3 4 14.5 4 13.2 4 12.4 4.6 12 5.2 11.6 4.6 10.8 4 9.5 4 6.7 4 4 6.4 4 10.4c0 4 3.5 7.4 8 10.6Z"
-            fill="currentColor"
-            opacity="0.35"
-          />
-          <path d="M7 13.5c2.8 0 6.2-1.4 8-4.5 0 5-3.4 8-8 8v-3.5Z" fill="currentColor" />
-        </svg>
-      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.png" alt="BetFree logo" className="h-12 w-12" />
       <div>
         <div className="text-[17px] font-extrabold tracking-tight leading-none">
           Bet<span style={{ color: "var(--green)" }}>Free</span>

@@ -11,10 +11,7 @@ export const metadata: Metadata = {
     title: "BetFree",
   },
   icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-    ],
+    icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
     apple: "/apple-touch-icon.png",
   },
 };
