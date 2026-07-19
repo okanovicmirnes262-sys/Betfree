@@ -37,11 +37,20 @@ export async function POST(req: NextRequest) {
     if (![1, 2, 3].includes(mood))
       return NextResponse.json({ error: "Pick how you feel today." }, { status: 400 });
 
+    // the client sends its LOCAL calendar day so midnight works in every timezone;
+    // accept it only if it's a plausible date near the server clock
+    let day = todayKey();
+    const clientDay = String(body.day || "");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(clientDay)) {
+      const diff = Math.abs(new Date(clientDay + "T00:00:00Z").getTime() - Date.now());
+      if (diff < 3 * 86400000) day = clientDay;
+    }
+
     await query({
       sql: `INSERT INTO user_checkins (user_id, day, mood, had_urge, created_at)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(user_id, day) DO UPDATE SET mood = excluded.mood, had_urge = excluded.had_urge`,
-      args: [session.userId, todayKey(), mood, hadUrge ? 1 : 0, new Date().toISOString()],
+      args: [session.userId, day, mood, hadUrge ? 1 : 0, new Date().toISOString()],
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

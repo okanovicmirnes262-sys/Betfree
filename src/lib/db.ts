@@ -69,6 +69,11 @@ const DDL = `
     kind TEXT NOT NULL,
     PRIMARY KEY (post_id, user_id, kind)
   );
+  CREATE TABLE IF NOT EXISTS rate_limits (
+    key TEXT PRIMARY KEY,
+    count INTEGER NOT NULL DEFAULT 0,
+    reset_at INTEGER NOT NULL DEFAULT 0
+  );
 `;
 
 async function initDb(): Promise<Client> {
@@ -96,6 +101,7 @@ async function initDb(): Promise<Client> {
     "ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE profiles ADD COLUMN debt_amount REAL NOT NULL DEFAULT 0",
     "ALTER TABLE profiles ADD COLUMN danger_hours TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0",
   ];
   for (const m of MIGRATIONS) {
     try {
@@ -116,4 +122,10 @@ export function getDb(): Promise<Client> {
 export async function query(stmt: InStatement) {
   const db = await getDb();
   return db.execute(stmt);
+}
+
+/** Runs statements atomically in a single write transaction. */
+export async function batch(stmts: InStatement[]) {
+  const db = await getDb();
+  return db.batch(stmts, "write");
 }

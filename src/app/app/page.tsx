@@ -25,7 +25,12 @@ type Profile = {
 
 type Reason = { id: number; text: string };
 type Checkin = { day: string; mood: number; hadUrge: boolean };
-type Post = { id: number; nickname: string; streakDays: number; text: string; createdAt: string; cheers: number; mine: boolean };
+type Post = { id: number; nickname: string; tag: string; streakDays: number; text: string; createdAt: string; cheers: number; mine: boolean };
+
+/** Local calendar day (YYYY-MM-DD) — NOT UTC, so midnight works in every timezone. */
+function localDay(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 type Me = {
   user: {
@@ -289,7 +294,9 @@ export default function AppPage() {
   }, [loadMe]);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    // coarse clock for slow-changing things (message, milestones, danger window);
+    // the per-second streak/savings tickers are isolated components below
+    const id = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(id);
   }, []);
 
@@ -414,6 +421,9 @@ export default function AppPage() {
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext("2d")!;
+        // JPEG has no alpha — fill white so transparent PNGs don't turn black
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, size, size);
         const min = Math.min(img.width, img.height);
         ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, size, size);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
@@ -429,7 +439,7 @@ export default function AppPage() {
     await fetch("/api/checkin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mood, hadUrge }),
+      body: JSON.stringify({ mood, hadUrge, day: localDay() }),
     }).catch(() => {});
     const r = await fetch("/api/checkin").then((r) => r.json()).catch(() => null);
     if (r) setCheckins(r.entries ?? []);
@@ -522,11 +532,7 @@ export default function AppPage() {
   const saved = (spend / (7 * 24 * 3600)) * streakSec;
   const goalPct = goalAmount > 0 ? Math.min(100, (saved / goalAmount) * 100) : 0;
 
-  const h = String(Math.floor((streakSec % 86400) / 3600)).padStart(2, "0");
-  const m = String(Math.floor((streakSec % 3600) / 60)).padStart(2, "0");
-  const sec = String(streakSec % 60).padStart(2, "0");
-
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = localDay();
   const doneToday = checkins?.some((e) => e.day === todayKey) ?? true;
   const sortedCheckins = checkins ? [...checkins].sort((a, b) => (a.day < b.day ? 1 : -1)) : [];
   const lowMoodRun = sortedCheckins.length >= 3 && sortedCheckins.slice(0, 3).every((e) => e.mood === 1);
@@ -805,7 +811,7 @@ export default function AppPage() {
                   Bet-free for
                 </div>
                 <div className="mono streak-num mt-2 font-semibold leading-none tracking-tight">
-                  {streakDays}d {h}:{m}:{sec}
+                  <LiveStreak quitStart={quitStart} />
                 </div>
                 <button
                   onClick={() => setSheet("slip")}
@@ -827,7 +833,9 @@ export default function AppPage() {
                 className="mt-3 rounded-3xl p-6 text-center text-white"
                 style={{ background: "linear-gradient(135deg, var(--green-deep), var(--green))", boxShadow: "0 12px 32px rgba(31,90,64,0.3)" }}
               >
-                <div className="mono saved-num font-semibold leading-none">{fmtMoney(saved, currency, 2)}</div>
+                <div className="mono saved-num font-semibold leading-none">
+                  <LiveSaved quitStart={quitStart} spend={spend} currency={currency} />
+                </div>
                 <div className="mt-1.5 text-[13px] font-medium" style={{ color: "#cde9da" }}>
                   saved since you quit · growing every second
                 </div>
@@ -983,7 +991,7 @@ export default function AppPage() {
                     {Array.from({ length: 14 }, (_, i) => {
                       const d = new Date();
                       d.setDate(d.getDate() - (13 - i));
-                      const key = d.toISOString().slice(0, 10);
+                      const key = localDay(d);
                       const entry = checkins.find((e) => e.day === key);
                       const mood = entry?.mood ?? 0;
                       const color = mood === 3 ? "var(--green)" : mood === 2 ? "var(--amber)" : mood === 1 ? "var(--ember)" : "var(--line)";
@@ -1097,7 +1105,12 @@ export default function AppPage() {
                     <Card key={p.id} className="p-4">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 overflow-hidden">
-                          <span className="truncate text-[14px] font-extrabold">{p.nickname}</span>
+                          <span className="truncate text-[14px] font-extrabold">
+                            {p.nickname}
+                            <span className="mono ml-1 text-[10.5px] font-semibold" style={{ color: "var(--muted)" }}>
+                              #{p.tag}
+                            </span>
+                          </span>
                           <span
                             className="mono flex-shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
                             style={{ background: "var(--green-soft)", color: "var(--green-deep)" }}
@@ -1421,9 +1434,9 @@ export default function AppPage() {
               </Card>
 
               <Card className="mt-3 p-5">
-                {me && me.profile.relapses > 0 && (
+                {(me?.profile?.relapses ?? 0) > 0 && (
                   <p className="mb-3 text-[12.5px]" style={{ color: "var(--muted)" }}>
-                    Restarts so far: {me.profile.relapses}. Every restart is proof you keep coming back to the fight.
+                    Restarts so far: {me?.profile?.relapses}. Every restart is proof you keep coming back to the fight.
                   </p>
                 )}
                 <button
@@ -1435,6 +1448,17 @@ export default function AppPage() {
                 </button>
                 <button onClick={logout} className="mt-2.5 w-full rounded-2xl py-3 text-[14px] font-extrabold text-white" style={{ background: "var(--nav-bg)" }}>
                   Sign out
+                </button>
+                <button
+                  onClick={async () => {
+                    await fetch("/api/auth/logout-all", { method: "POST" });
+                    router.push("/login");
+                    router.refresh();
+                  }}
+                  className="mt-2 w-full rounded-2xl py-2.5 text-[12.5px] font-bold"
+                  style={{ color: "var(--muted)" }}
+                >
+                  Sign out on all devices
                 </button>
               </Card>
             </section>
@@ -1529,9 +1553,38 @@ export default function AppPage() {
 
 /* ---------------- panic overlay ---------------- */
 
+function LiveStreak({ quitStart }: { quitStart: number }) {
+  const [t, setT] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setT(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const s = Math.max(0, Math.floor((t - quitStart) / 1000));
+  const days = Math.floor(s / 86400);
+  const h = String(Math.floor((s % 86400) / 3600)).padStart(2, "0");
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const sec = String(s % 60).padStart(2, "0");
+  return (
+    <>
+      {days}d {h}:{m}:{sec}
+    </>
+  );
+}
+
+function LiveSaved({ quitStart, spend, currency }: { quitStart: number; spend: number; currency: string }) {
+  const [t, setT] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setT(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const s = Math.max(0, Math.floor((t - quitStart) / 1000));
+  return <>{fmtMoney((spend / (7 * 24 * 3600)) * s, currency, 2)}</>;
+}
+
 function PanicOverlay({ reasons, onClose }: { reasons: Reason[]; onClose: (won: boolean) => void }) {
   const [t, setT] = useState(60);
   const done = useRef(false);
+  const primaryRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -1543,11 +1596,24 @@ function PanicOverlay({ reasons, onClose }: { reasons: Reason[]; onClose: (won: 
         return v - 1;
       });
     }, 1000);
-    return () => clearInterval(id);
+    // lock background scroll and move focus into the dialog
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    primaryRef.current?.focus();
+    return () => {
+      clearInterval(id);
+      document.body.style.overflow = prevOverflow;
+    };
   }, []);
 
   return (
-    <div className="safe-overlay fixed inset-0 z-50 flex flex-col items-center justify-center overflow-y-auto px-8 text-center" style={{ background: "var(--overlay)" }}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Panic tool"
+      className="safe-overlay fixed inset-0 z-50 flex flex-col items-center justify-center overflow-y-auto px-8 text-center"
+      style={{ background: "var(--overlay)" }}
+    >
       <div className="mono text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--green)" }}>
         An urge lasts 15–20 minutes. This will pass.
       </div>
@@ -1579,6 +1645,7 @@ function PanicOverlay({ reasons, onClose }: { reasons: Reason[]; onClose: (won: 
       </p>
       <div className="mt-8 w-full max-w-sm space-y-2.5">
         <button
+          ref={primaryRef}
           onClick={() => {
             if (done.current) return;
             done.current = true;

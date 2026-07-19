@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { query } from "@/lib/db";
+import { query, batch } from "@/lib/db";
 import { setSessionCookie } from "@/lib/auth";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = clientIp(req);
+    if (!(await rateLimit(`reg:${ip}`, 10, 3600)))
+      return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+
     const { name, email, password } = await req.json();
     const cleanName = String(name || "").trim();
     const cleanEmail = String(email || "").trim().toLowerCase();
@@ -17,26 +22,34 @@ export async function POST(req: NextRequest) {
     if (pass.length < 8)
       return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
 
+    // hash before the existence check so both paths take similar time
+    const hash = await bcrypt.hash(pass, 10);
+
     const existing = await query({
       sql: "SELECT id FROM users WHERE email = ?",
       args: [cleanEmail],
     });
     if (existing.rows.length > 0)
-      return NextResponse.json({ error: "An account with this email already exists. Sign in instead." }, { status: 409 });
+      return NextResponse.json(
+        { error: "This email can't be used for a new account. If it's yours, try signing in." },
+        { status: 409 }
+      );
 
-    const hash = await bcrypt.hash(pass, 10);
     const now = new Date().toISOString();
-    const res = await query({
-      sql: "INSERT INTO users (email, password_hash, name, created_at) VALUES (?, ?, ?, ?)",
-      args: [cleanEmail, hash, cleanName, now],
-    });
-    const userId = Number(res.lastInsertRowid);
-    await query({
-      sql: "INSERT INTO profiles (user_id, updated_at) VALUES (?, ?)",
-      args: [userId, now],
-    });
+    // atomic: a user row is never created without its profile row
+    const results = await batch([
+      {
+        sql: "INSERT INTO users (email, password_hash, name, created_at) VALUES (?, ?, ?, ?)",
+        args: [cleanEmail, hash, cleanName, now],
+      },
+      {
+        sql: "INSERT INTO profiles (user_id, updated_at) VALUES (last_insert_rowid(), ?)",
+        args: [now],
+      },
+    ]);
+    const userId = Number(results[0].lastInsertRowid);
 
-    await setSessionCookie({ userId, email: cleanEmail });
+    await setSessionCookie({ userId, email: cleanEmail, v: 0 });
     return NextResponse.json({ ok: true, user: { id: userId, name: cleanName, email: cleanEmail } });
   } catch {
     return NextResponse.json({ error: "Server error. Please try again." }, { status: 500 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { query } from "@/lib/db";
+import { query, batch } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 
 export async function GET() {
@@ -28,14 +28,17 @@ export async function POST(req: NextRequest) {
     const trigger = String(body.trigger || "").slice(0, 200);
     const now = new Date().toISOString();
 
-    await query({
-      sql: "INSERT INTO urge_logs (user_id, trigger, won, created_at) VALUES (?, ?, 1, ?)",
-      args: [session.userId, trigger, now],
-    });
-    await query({
-      sql: "UPDATE profiles SET urges = urges + 1, updated_at = ? WHERE user_id = ?",
-      args: [now, session.userId],
-    });
+    // atomic: the counter can never drift from the log
+    await batch([
+      {
+        sql: "INSERT INTO urge_logs (user_id, trigger, won, created_at) VALUES (?, ?, 1, ?)",
+        args: [session.userId, trigger, now],
+      },
+      {
+        sql: "UPDATE profiles SET urges = urges + 1, updated_at = ? WHERE user_id = ?",
+        args: [now, session.userId],
+      },
+    ]);
     const res = await query({
       sql: "SELECT urges FROM profiles WHERE user_id = ?",
       args: [session.userId],

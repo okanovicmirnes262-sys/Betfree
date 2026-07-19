@@ -1,10 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 type Mode = "login" | "register";
+
+/** Only allow same-origin relative paths as post-login destinations. */
+function safeNext(): string {
+  try {
+    const next = new URLSearchParams(window.location.search).get("next") || "";
+    if (next.startsWith("/") && !next.startsWith("//")) return next;
+  } catch {}
+  return "/app";
+}
 
 function Logo() {
   return (
@@ -25,13 +34,20 @@ function Logo() {
 
 function SocialButton({ label, icon }: { label: string; icon: React.ReactNode }) {
   const [note, setNote] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
   return (
     <div className="relative flex-1">
       <button
         type="button"
         onClick={() => {
           setNote(true);
-          setTimeout(() => setNote(false), 2200);
+          if (timer.current) clearTimeout(timer.current);
+          timer.current = setTimeout(() => setNote(false), 2200);
         }}
         className="surface flex w-full items-center justify-center gap-2.5 rounded-2xl border px-4 py-3 text-[14px] font-semibold transition hover:shadow-md active:scale-[0.98]"
         style={{ color: "var(--ink-soft)" }}
@@ -77,7 +93,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      router.push("/app");
+      router.push(safeNext());
       router.refresh();
     } catch {
       setError("Can't reach the server. Check your connection.");
