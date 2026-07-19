@@ -5,10 +5,28 @@ export const metadata: Metadata = {
   title: "BetFree — Quit gambling for good",
   description:
     "Quit betting with BetFree: day counter, money saved live, panic button, daily motivation and a personal quit plan.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "BetFree",
+  },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f4f6f2",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0f1513" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f6f2" },
+  ],
 };
 
 // Resolves the theme before first paint to avoid a flash of the wrong theme.

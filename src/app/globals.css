@@ -64,11 +64,20 @@ html[data-theme="dark"] {
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body {
   min-height: 100%;
+}
+
+html {
+  overscroll-behavior-y: none;
+}
+
+button {
+  touch-action: manipulation;
 }
 
 body {
@@ -158,4 +167,60 @@ body::before {
 input:-webkit-autofill {
   -webkit-box-shadow: 0 0 0 40px var(--surface-solid) inset;
   -webkit-text-fill-color: var(--ink);
+}
+
+/* 16px inputs prevent iOS Safari from zooming in on focus */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+/* fluid type for the big numbers so they never overflow small phones */
+.streak-num {
+  font-size: clamp(34px, 12.5vw, 54px);
+}
+
+.saved-num {
+  font-size: clamp(28px, 9.5vw, 38px);
+}
+
+.loss-num {
+  font-size: clamp(36px, 12vw, 50px);
+}
+
+.hero-title {
+  font-size: clamp(26px, 8.5vw, 32px);
+}
+
+/* notch / home-indicator safe areas (viewport-fit=cover) */
+.safe-main {
+  padding-top: calc(1.75rem + env(safe-area-inset-top));
+  padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
+  padding-left: max(1.25rem, env(safe-area-inset-left));
+  padding-right: max(1.25rem, env(safe-area-inset-right));
+}
+
+.safe-sheet {
+  padding-bottom: calc(2.25rem + env(safe-area-inset-bottom));
+}
+
+.safe-overlay {
+  padding-top: calc(2rem + env(safe-area-inset-top));
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* a touch of breathing room on tablets/desktop so the column doesn't hug the top */
+@media (min-width: 640px) {
+  .safe-main {
+    padding-top: calc(3rem + env(safe-area-inset-top));
+  }
 }
