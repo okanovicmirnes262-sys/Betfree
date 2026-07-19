@@ -22,9 +22,11 @@ The app runs at http://localhost:3000. The database is created automatically at 
 
 | Variable | Description |
 |---|---|
-| `SESSION_SECRET` | Secret key for signing sessions — required in production |
+| `SESSION_SECRET` | Secret key for signing sessions — required in production (the app refuses to issue sessions without it) |
 | `TURSO_DATABASE_URL` | (optional) Turso database URL instead of the local file |
 | `TURSO_AUTH_TOKEN` | (optional) Turso auth token |
+| `BREVO_API_KEY` | (optional) [Brevo](https://brevo.com) API key — enables password-reset and email-verification emails |
+| `EMAIL_FROM` | (optional) Sender address verified in Brevo, e.g. `you@gmail.com` |
 
 ## Structure
 

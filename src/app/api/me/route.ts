@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const session = await requireAuth();
     const userRes = await query({
-      sql: "SELECT id, email, name, first_name, last_name, phone, avatar, created_at FROM users WHERE id = ?",
+      sql: "SELECT id, email, name, first_name, last_name, phone, avatar, email_verified, created_at FROM users WHERE id = ?",
       args: [session.userId],
     });
     const user = userRes.rows[0];
@@ -37,6 +37,7 @@ export async function GET() {
         lastName: String(user.last_name || ""),
         phone: String(user.phone || ""),
         avatar: String(user.avatar || ""),
+        emailVerified: Number(user.email_verified) === 1,
       },
       profile: p
         ? {

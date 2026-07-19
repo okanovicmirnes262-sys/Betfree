@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { query, batch } from "@/lib/db";
 import { setSessionCookie } from "@/lib/auth";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { sendEmail, emailShell, createEmailToken } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,6 +49,22 @@ export async function POST(req: NextRequest) {
       },
     ]);
     const userId = Number(results[0].lastInsertRowid);
+
+    // fire-and-forget verification email; registration succeeds either way
+    try {
+      const token = await createEmailToken(userId, "verify");
+      const origin = new URL(req.url).origin;
+      void sendEmail(
+        cleanEmail,
+        "Welcome to BetFree — verify your email",
+        emailShell(
+          "Welcome to BetFree",
+          "You just took the hardest step. Confirm this email address so you can recover your account if you ever forget your password.",
+          "Verify my email",
+          `${origin}/api/auth/verify?token=${token}`
+        )
+      );
+    } catch {}
 
     await setSessionCookie({ userId, email: cleanEmail, v: 0 });
     return NextResponse.json({ ok: true, user: { id: userId, name: cleanName, email: cleanEmail } });
