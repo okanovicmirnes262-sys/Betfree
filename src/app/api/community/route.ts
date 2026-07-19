@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const session = await requireAuth();
     const res = await query({
-      sql: `SELECT p.id, p.nickname, p.streak_days, p.text, p.created_at,
+      sql: `SELECT p.id, p.user_id, p.nickname, p.streak_days, p.text, p.created_at,
               (SELECT COUNT(*) FROM post_reactions r WHERE r.post_id = p.id AND r.kind = 'cheer') AS cheers,
               EXISTS(SELECT 1 FROM post_reactions r WHERE r.post_id = p.id AND r.user_id = ? AND r.kind = 'cheer') AS mine
             FROM community_posts p
@@ -18,6 +18,8 @@ export async function GET() {
       posts: res.rows.map((r) => ({
         id: Number(r.id),
         nickname: String(r.nickname),
+        // stable per-user tag so identical nicknames can't impersonate each other
+        tag: (((Number(r.user_id) * 2654435761) >>> 0) % 0xffff).toString(16).padStart(4, "0"),
         streakDays: Number(r.streak_days),
         text: String(r.text),
         createdAt: String(r.created_at),

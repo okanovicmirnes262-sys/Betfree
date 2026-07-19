@@ -12,10 +12,21 @@ export async function GET() {
     const user = userRes.rows[0];
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    const profRes = await query({
+    let profRes = await query({
       sql: "SELECT weekly_spend, risk_score, quiz_done, quit_start, urges, currency, goal_name, goal_amount, relapses, debt_amount, danger_hours FROM profiles WHERE user_id = ?",
       args: [session.userId],
     });
+    if (profRes.rows.length === 0) {
+      // self-heal: recreate a missing profile row so the app never sees null
+      await query({
+        sql: "INSERT OR IGNORE INTO profiles (user_id, updated_at) VALUES (?, ?)",
+        args: [session.userId, new Date().toISOString()],
+      });
+      profRes = await query({
+        sql: "SELECT weekly_spend, risk_score, quiz_done, quit_start, urges, currency, goal_name, goal_amount, relapses, debt_amount, danger_hours FROM profiles WHERE user_id = ?",
+        args: [session.userId],
+      });
+    }
     const p = profRes.rows[0];
     return NextResponse.json({
       user: {

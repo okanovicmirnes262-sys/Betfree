@@ -43,23 +43,26 @@ export async function PUT(req: NextRequest) {
     }
     if (typeof body.dangerHours === "string") {
       let valid = body.dangerHours === "";
+      let normalized = "";
       if (!valid) {
         try {
           const d = JSON.parse(body.dangerHours);
+          const days = Array.isArray(d.days) ? [...new Set(d.days)] : null;
           valid =
-            Array.isArray(d.days) &&
-            d.days.every((x: unknown) => typeof x === "number" && x >= 0 && x <= 6) &&
-            d.days.length <= 7 &&
+            days !== null &&
+            days.every((x: unknown) => typeof x === "number" && Number.isInteger(x) && x >= 0 && x <= 6) &&
+            days.length <= 7 &&
             typeof d.from === "number" && d.from >= 0 && d.from <= 23 &&
             typeof d.to === "number" && d.to >= 1 && d.to <= 24 &&
             d.from < d.to;
+          if (valid) normalized = JSON.stringify({ days, from: d.from, to: d.to });
         } catch {
           valid = false;
         }
       }
       if (!valid) return NextResponse.json({ error: "Invalid danger hours" }, { status: 400 });
       fields.push("danger_hours = ?");
-      args.push(body.dangerHours.slice(0, 200));
+      args.push(normalized);
     }
     if (body.quitStart === "now") {
       fields.push("quit_start = COALESCE(quit_start, ?)");
