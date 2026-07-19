@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { rateLimit } from "@/lib/ratelimit";
 
 export async function GET() {
   try {
@@ -40,14 +41,21 @@ export async function POST(req: NextRequest) {
     const text = String(body.text || "").trim().slice(0, 220);
     if (!text) return NextResponse.json({ error: "Write something first." }, { status: 400 });
 
-    // one post per 5 minutes per user
+    // short cooldown between posts + a daily cap, so chatting is easy but spam isn't
+    const COOLDOWN_MS = 45 * 1000;
     const last = await query({
       sql: "SELECT created_at FROM community_posts WHERE user_id = ? ORDER BY id DESC LIMIT 1",
       args: [session.userId],
     });
     const lastAt = last.rows[0]?.created_at ? new Date(String(last.rows[0].created_at)).getTime() : 0;
-    if (Date.now() - lastAt < 5 * 60 * 1000)
-      return NextResponse.json({ error: "You can post again in a few minutes." }, { status: 429 });
+    const waitMs = COOLDOWN_MS - (Date.now() - lastAt);
+    if (waitMs > 0)
+      return NextResponse.json(
+        { error: `Please wait ${Math.ceil(waitMs / 1000)}s before posting again.`, retryIn: Math.ceil(waitMs / 1000) },
+        { status: 429 }
+      );
+    if (!(await rateLimit(`post-day:${session.userId}`, 30, 86400)))
+      return NextResponse.json({ error: "Daily posting limit reached. Back tomorrow — we'll be here." }, { status: 429 });
 
     const userRes = await query({
       sql: "SELECT name FROM users WHERE id = ?",
