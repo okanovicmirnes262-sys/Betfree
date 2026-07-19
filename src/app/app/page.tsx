@@ -19,7 +19,13 @@ type Profile = {
   goalName: string;
   goalAmount: number;
   relapses: number;
+  debtAmount: number;
+  dangerHours: string;
 };
+
+type Reason = { id: number; text: string };
+type Checkin = { day: string; mood: number; hadUrge: boolean };
+type Post = { id: number; nickname: string; streakDays: number; text: string; createdAt: string; cheers: number; mine: boolean };
 
 type Me = {
   user: {
@@ -127,7 +133,7 @@ function Logo({ size = 40 }: { size?: number }) {
   return <img src="/logo.png" alt="BetFree" style={{ width: size, height: size }} />;
 }
 
-type Tab = "home" | "journal" | "support" | "profile";
+type Tab = "home" | "journal" | "community" | "support" | "profile";
 
 function BottomNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   const items: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -150,6 +156,18 @@ function BottomNav({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
           <circle cx="3.5" cy="6" r="1.3" fill="currentColor" stroke="none" />
           <circle cx="3.5" cy="12" r="1.3" fill="currentColor" stroke="none" />
           <circle cx="3.5" cy="18" r="1.3" fill="currentColor" stroke="none" />
+        </svg>
+      ),
+    },
+    {
+      id: "community",
+      label: "Community",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="9" cy="8" r="3.5" />
+          <path d="M2.5 20c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5" />
+          <circle cx="17.5" cy="9.5" r="2.6" />
+          <path d="M16.5 14.7c2.9.4 5 2.2 5 5.3" />
         </svg>
       ),
     },
@@ -219,6 +237,20 @@ export default function AppPage() {
   const [profileSaved, setProfileSaved] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // recovery features
+  const [reasons, setReasons] = useState<Reason[]>([]);
+  const [newReason, setNewReason] = useState("");
+  const [checkins, setCheckins] = useState<Checkin[] | null>(null);
+  const [checkinMood, setCheckinMood] = useState(0);
+  const [posts, setPosts] = useState<Post[] | null>(null);
+  const [newPost, setNewPost] = useState("");
+  const [postErr, setPostErr] = useState("");
+  const [hiddenPosts, setHiddenPosts] = useState<number[]>([]);
+  const [debtAmount, setDebtAmount] = useState(0);
+  const [dangerDays, setDangerDays] = useState<number[]>([]);
+  const [dangerFrom, setDangerFrom] = useState(18);
+  const [dangerTo, setDangerTo] = useState(23);
+
   const loadMe = useCallback(async () => {
     const r = await fetch("/api/me");
     if (r.status === 401) {
@@ -236,6 +268,15 @@ export default function AppPage() {
     setFirstName(data.user?.firstName ?? "");
     setLastName(data.user?.lastName ?? "");
     setPhone(data.user?.phone ?? "");
+    setDebtAmount(data.profile?.debtAmount ?? 0);
+    try {
+      const d = JSON.parse(data.profile?.dangerHours || "");
+      setDangerDays(Array.isArray(d.days) ? d.days : []);
+      if (typeof d.from === "number") setDangerFrom(d.from);
+      if (typeof d.to === "number") setDangerTo(d.to);
+    } catch {
+      setDangerDays([]);
+    }
     return data;
   }, [router]);
 
@@ -261,6 +302,28 @@ export default function AppPage() {
         .catch(() => setHistory([]));
     }
   }, [tab, history]);
+
+  // reasons + check-ins load once with the session
+  useEffect(() => {
+    fetch("/api/reasons")
+      .then((r) => r.json())
+      .then((r) => setReasons(r?.reasons ?? []))
+      .catch(() => {});
+    fetch("/api/checkin")
+      .then((r) => r.json())
+      .then((r) => setCheckins(r?.entries ?? []))
+      .catch(() => setCheckins([]));
+  }, []);
+
+  // community posts load when the tab opens
+  useEffect(() => {
+    if (tab === "community" && posts === null) {
+      fetch("/api/community")
+        .then((r) => r.json())
+        .then((r) => setPosts(r?.posts ?? []))
+        .catch(() => setPosts([]));
+    }
+  }, [tab, posts]);
 
   // animated count-up of the projected loss on the result screen
   const fiveYr = spend * 52 * 5;
@@ -361,6 +424,75 @@ export default function AppPage() {
     reader.readAsDataURL(file);
   }
 
+  async function submitCheckin(mood: number, hadUrge: boolean) {
+    setCheckinMood(0);
+    await fetch("/api/checkin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mood, hadUrge }),
+    }).catch(() => {});
+    const r = await fetch("/api/checkin").then((r) => r.json()).catch(() => null);
+    if (r) setCheckins(r.entries ?? []);
+  }
+
+  async function addReason() {
+    const text = newReason.trim();
+    if (!text) return;
+    setNewReason("");
+    const r = await fetch("/api/reasons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    }).then((r) => r.json()).catch(() => null);
+    if (r?.ok) setReasons((prev) => [...prev, { id: r.id, text }]);
+  }
+
+  async function delReason(id: number) {
+    setReasons((prev) => prev.filter((x) => x.id !== id));
+    await fetch(`/api/reasons?id=${id}`, { method: "DELETE" }).catch(() => {});
+  }
+
+  async function submitPost() {
+    const text = newPost.trim();
+    if (!text) return;
+    setPostErr("");
+    const r = await fetch("/api/community", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    }).then((r) => r.json()).catch(() => null);
+    if (r?.ok) {
+      setNewPost("");
+      setPosts(null); // refetch
+    } else {
+      setPostErr(r?.error || "Could not post. Try again.");
+    }
+  }
+
+  async function cheerPost(post: Post) {
+    if (post.mine) return;
+    setPosts((prev) => prev?.map((p) => (p.id === post.id ? { ...p, cheers: p.cheers + 1, mine: true } : p)) ?? null);
+    await fetch("/api/community/react", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId: post.id, kind: "cheer" }),
+    }).catch(() => {});
+  }
+
+  async function flagPost(post: Post) {
+    setHiddenPosts((prev) => [...prev, post.id]);
+    await fetch("/api/community/react", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId: post.id, kind: "flag" }),
+    }).catch(() => {});
+  }
+
+  function saveDangerHours(days: number[], from: number, to: number) {
+    const value = days.length === 0 ? "" : JSON.stringify({ days, from, to });
+    saveProfile({ dangerHours: value });
+  }
+
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
@@ -393,6 +525,19 @@ export default function AppPage() {
   const h = String(Math.floor((streakSec % 86400) / 3600)).padStart(2, "0");
   const m = String(Math.floor((streakSec % 3600) / 60)).padStart(2, "0");
   const sec = String(streakSec % 60).padStart(2, "0");
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const doneToday = checkins?.some((e) => e.day === todayKey) ?? true;
+  const sortedCheckins = checkins ? [...checkins].sort((a, b) => (a.day < b.day ? 1 : -1)) : [];
+  const lowMoodRun = sortedCheckins.length >= 3 && sortedCheckins.slice(0, 3).every((e) => e.mood === 1);
+
+  const nowDate = new Date(now);
+  const dangerActive =
+    dangerDays.includes(nowDate.getDay()) && nowDate.getHours() >= dangerFrom && nowDate.getHours() < dangerTo;
+
+  const debtWeeks = debtAmount > 0 && spend > 0 ? debtAmount / spend : 0;
+  const debtFreeDate = new Date(now + debtWeeks * 7 * 86400000);
+  const debtMonths = Math.max(1, Math.round(debtWeeks / 4.345));
 
   const inputCls = "surface w-full rounded-2xl border px-4 py-3 font-medium outline-none";
   const labelCls = "mb-1.5 block text-[13px] font-bold";
@@ -573,7 +718,89 @@ export default function AppPage() {
                 <ThemeToggle />
               </div>
 
-              <Card className="mt-5 p-6 text-center">
+              {dangerActive && (
+                <div
+                  className="animate-rise mt-5 rounded-3xl p-5"
+                  style={{ background: "var(--ember-soft)", border: "1px solid var(--ember-soft-border)" }}
+                >
+                  <div className="mono text-[10.5px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--ember-deep)" }}>
+                    ⚠️ You&apos;re in your risky hours
+                  </div>
+                  <p className="mt-1.5 text-[14px] font-semibold leading-relaxed">
+                    This is when urges usually hit you. Have a plan: keep your phone busy, and if it gets loud in your head — the panic button is right below.
+                  </p>
+                  <button
+                    onClick={() => setPanic(true)}
+                    className="mt-3 w-full rounded-2xl py-3 text-[14px] font-extrabold text-white"
+                    style={{ background: "linear-gradient(135deg, var(--ember), var(--ember-deep))" }}
+                  >
+                    ⚡ Open the panic tool now
+                  </button>
+                </div>
+              )}
+
+              {checkins !== null && !doneToday && (
+                <Card className={"p-5 " + (dangerActive ? "mt-3" : "mt-5")}>
+                  <div className="mono text-[10.5px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--green)" }}>
+                    Daily check-in
+                  </div>
+                  {checkinMood === 0 ? (
+                    <>
+                      <p className="mt-2 text-[15px] font-semibold">How are you feeling today?</p>
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        {[
+                          [3, "😊", "Good"],
+                          [2, "😐", "Okay"],
+                          [1, "😟", "Rough"],
+                        ].map(([v, e, l]) => (
+                          <button
+                            key={v}
+                            onClick={() => setCheckinMood(v as number)}
+                            className="surface rounded-2xl border py-3 text-center transition hover:shadow-md active:scale-[0.97]"
+                          >
+                            <div className="text-[24px]">{e}</div>
+                            <div className="mt-0.5 text-[12px] font-bold" style={{ color: "var(--muted)" }}>
+                              {l}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-2 text-[15px] font-semibold">Did you feel an urge to bet today?</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => submitCheckin(checkinMood, true)}
+                          className="surface rounded-2xl border py-3 text-[14px] font-bold transition hover:shadow-md"
+                        >
+                          Yes, I did
+                        </button>
+                        <button
+                          onClick={() => submitCheckin(checkinMood, false)}
+                          className="rounded-2xl py-3 text-[14px] font-extrabold text-white transition active:scale-[0.97]"
+                          style={{ background: "linear-gradient(135deg, var(--green), var(--green-deep))" }}
+                        >
+                          No urges
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </Card>
+              )}
+
+              {lowMoodRun && (
+                <Card className="mt-3 p-5" style={{ borderColor: "var(--amber-soft-border)" }}>
+                  <p className="text-[14px] font-semibold leading-relaxed">
+                    Three rough days in a row. That&apos;s heavy — and it&apos;s exactly when talking to someone helps most.{" "}
+                    <button onClick={() => setTab("support")} className="font-extrabold underline underline-offset-2" style={{ color: "var(--green)" }}>
+                      See support options →
+                    </button>
+                  </p>
+                </Card>
+              )}
+
+              <Card className={"p-6 text-center " + (dangerActive || (checkins !== null && !doneToday) || lowMoodRun ? "mt-3" : "mt-5")}>
                 <div className="mono text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
                   Bet-free for
                 </div>
@@ -618,6 +845,21 @@ export default function AppPage() {
                   </div>
                 )}
               </div>
+
+              {debtAmount > 0 && spend > 0 && (
+                <Card className="mt-3 p-5">
+                  <div className="mono text-[10.5px] font-semibold uppercase tracking-[0.16em]" style={{ color: "var(--muted)" }}>
+                    💰 Your road to debt-free
+                  </div>
+                  <div className="mt-2 text-[22px] font-extrabold tracking-tight">
+                    {debtFreeDate.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+                  </div>
+                  <p className="mt-1 text-[13.5px] leading-relaxed" style={{ color: "var(--muted)" }}>
+                    If every euro you used to bet goes to your {fmtMoney(debtAmount, currency)} debt instead, you&apos;re free in about{" "}
+                    <b style={{ color: "var(--ink)" }}>{debtMonths} months</b>. Keep betting and that date never comes.
+                  </p>
+                </Card>
+              )}
 
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <Card className="p-4 text-center">
@@ -728,6 +970,42 @@ export default function AppPage() {
                 )}
               </Card>
 
+              <Card className="mt-3 p-5">
+                <div className="mono text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--muted)" }}>
+                  Mood · last 14 days
+                </div>
+                {checkins === null || checkins.length === 0 ? (
+                  <p className="mt-3 text-[13.5px] font-semibold" style={{ color: "var(--muted)" }}>
+                    No check-ins yet — answer the daily question on Home and watch your mood climb as the streak grows.
+                  </p>
+                ) : (
+                  <div className="mt-4 flex items-end gap-1" style={{ height: 60 }}>
+                    {Array.from({ length: 14 }, (_, i) => {
+                      const d = new Date();
+                      d.setDate(d.getDate() - (13 - i));
+                      const key = d.toISOString().slice(0, 10);
+                      const entry = checkins.find((e) => e.day === key);
+                      const mood = entry?.mood ?? 0;
+                      const color = mood === 3 ? "var(--green)" : mood === 2 ? "var(--amber)" : mood === 1 ? "var(--ember)" : "var(--line)";
+                      return (
+                        <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                          <div
+                            className="w-full rounded-sm"
+                            style={{ height: `${mood === 0 ? 5 : 10 + mood * 13}px`, background: color, opacity: mood === 0 ? 0.5 : 0.9 }}
+                            title={key}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="mt-2 flex gap-3 text-[11px] font-semibold" style={{ color: "var(--muted)" }}>
+                  <span>😊 <span style={{ color: "var(--green)" }}>■</span></span>
+                  <span>😐 <span style={{ color: "var(--amber)" }}>■</span></span>
+                  <span>😟 <span style={{ color: "var(--ember)" }}>■</span></span>
+                </div>
+              </Card>
+
               <Card className="mt-3 flex-1 p-5">
                 <div className="mono text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--muted)" }}>
                   All logged urges
@@ -760,6 +1038,99 @@ export default function AppPage() {
               >
                 + Log an urge
               </button>
+            </section>
+          )}
+
+          {/* COMMUNITY */}
+          {tab === "community" && (
+            <section className="animate-rise flex flex-1 flex-col">
+              <h1 className="text-[24px] font-extrabold tracking-tight">Community</h1>
+              <p className="mt-1 text-[13.5px]" style={{ color: "var(--muted)" }}>
+                Anonymous wall. Only your nickname shows. You are not the only one fighting this.
+              </p>
+
+              <Card className="mt-5 p-4">
+                <textarea
+                  value={newPost}
+                  onChange={(e) => setNewPost(e.target.value.slice(0, 220))}
+                  placeholder={`Share a win or a hard moment — e.g. "Day ${streakDays}: watched the match without a single bet."`}
+                  rows={2}
+                  className="w-full resize-none border-none bg-transparent font-medium outline-none"
+                  style={{ color: "var(--ink)" }}
+                />
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="mono text-[11px]" style={{ color: "var(--muted)" }}>
+                    {newPost.length}/220
+                  </span>
+                  <button
+                    onClick={submitPost}
+                    disabled={!newPost.trim()}
+                    className="rounded-full px-5 py-2 text-[13px] font-extrabold text-white disabled:opacity-40"
+                    style={{ background: "linear-gradient(135deg, var(--green), var(--green-deep))" }}
+                  >
+                    Share
+                  </button>
+                </div>
+                {postErr && (
+                  <p className="animate-rise mt-2 text-[12.5px] font-bold" style={{ color: "var(--ember-deep)" }}>
+                    {postErr}
+                  </p>
+                )}
+              </Card>
+
+              <div className="mt-3 space-y-2.5">
+                {posts === null && (
+                  <p className="text-[14px] font-semibold" style={{ color: "var(--muted)" }}>
+                    Loading…
+                  </p>
+                )}
+                {posts !== null && posts.filter((p) => !hiddenPosts.includes(p.id)).length === 0 && (
+                  <Card className="p-5">
+                    <p className="text-[14px] font-semibold" style={{ color: "var(--muted)" }}>
+                      No posts yet. Be the first — your day count might be exactly what someone else needs to see.
+                    </p>
+                  </Card>
+                )}
+                {posts
+                  ?.filter((p) => !hiddenPosts.includes(p.id))
+                  .map((p) => (
+                    <Card key={p.id} className="p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <span className="truncate text-[14px] font-extrabold">{p.nickname}</span>
+                          <span
+                            className="mono flex-shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
+                            style={{ background: "var(--green-soft)", color: "var(--green-deep)" }}
+                          >
+                            day {p.streakDays}
+                          </span>
+                        </div>
+                        <span className="mono flex-shrink-0 text-[11px]" style={{ color: "var(--muted)" }}>
+                          {new Date(p.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-[14.5px] leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                        {p.text}
+                      </p>
+                      <div className="mt-2.5 flex items-center justify-between">
+                        <button
+                          onClick={() => cheerPost(p)}
+                          className="rounded-full border px-3.5 py-1.5 text-[13px] font-bold transition active:scale-95"
+                          style={
+                            p.mine
+                              ? { background: "var(--green-soft)", borderColor: "var(--green-soft-border)", color: "var(--green-deep)" }
+                              : { background: "var(--surface)", borderColor: "var(--line)", color: "var(--muted)" }
+                          }
+                        >
+                          💪 {p.cheers > 0 ? p.cheers : ""}
+                        </button>
+                        <button onClick={() => flagPost(p)} className="text-[11.5px] font-semibold" style={{ color: "var(--muted)" }}>
+                          Report
+                        </button>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
             </section>
           )}
 
@@ -927,6 +1298,129 @@ export default function AppPage() {
               </Card>
 
               <Card className="mt-3 p-5">
+                <div className={labelCls} style={{ color: "var(--ink-soft)" }}>
+                  ✍️ My reasons for quitting
+                </div>
+                <p className="mb-3 text-[12.5px] leading-relaxed" style={{ color: "var(--muted)" }}>
+                  Written by the clear-headed you, shown to the struggling you — these appear on the panic screen when an urge hits.
+                </p>
+                {reasons.map((r) => (
+                  <div key={r.id} className="flex items-start justify-between gap-3 border-b py-2.5 last:border-b-0" style={{ borderColor: "var(--line)" }}>
+                    <span className="text-[14px] font-semibold leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                      {r.text}
+                    </span>
+                    <button onClick={() => delReason(r.id)} aria-label="Delete reason" className="mt-0.5 flex-shrink-0 text-[12px] font-bold" style={{ color: "var(--muted)" }}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <div className="mt-3 flex gap-2">
+                  <input
+                    type="text"
+                    value={newReason}
+                    onChange={(e) => setNewReason(e.target.value.slice(0, 200))}
+                    placeholder='e.g. "I want my family to trust me again"'
+                    className={inputCls + " flex-1"}
+                    onKeyDown={(e) => e.key === "Enter" && addReason()}
+                  />
+                  <button
+                    onClick={addReason}
+                    disabled={!newReason.trim()}
+                    className="rounded-2xl px-4 text-[14px] font-extrabold text-white disabled:opacity-40"
+                    style={{ background: "linear-gradient(135deg, var(--green), var(--green-deep))" }}
+                  >
+                    Add
+                  </button>
+                </div>
+              </Card>
+
+              <Card className="mt-3 p-5">
+                <div className={labelCls} style={{ color: "var(--ink-soft)" }}>
+                  💰 Gambling debt <span className="font-medium" style={{ color: "var(--muted)" }}>(optional)</span>
+                </div>
+                <p className="mb-2.5 text-[12.5px] leading-relaxed" style={{ color: "var(--muted)" }}>
+                  Enter what you owe and the Home screen shows the date you&apos;ll be debt-free if the betting money goes to the debt instead.
+                </p>
+                <input
+                  type="number"
+                  min={0}
+                  inputMode="decimal"
+                  value={debtAmount || ""}
+                  onChange={(e) => setDebtAmount(Number(e.target.value) || 0)}
+                  placeholder="Total debt amount"
+                  className={inputCls}
+                />
+                <button
+                  onClick={() => saveProfile({ debtAmount })}
+                  className="surface mt-3 w-full rounded-2xl border py-3 text-[14px] font-bold"
+                  style={{ color: "var(--ink-soft)" }}
+                >
+                  Save debt
+                </button>
+              </Card>
+
+              <Card className="mt-3 p-5">
+                <div className={labelCls} style={{ color: "var(--ink-soft)" }}>
+                  ⚠️ My risky hours
+                </div>
+                <p className="mb-3 text-[12.5px] leading-relaxed" style={{ color: "var(--muted)" }}>
+                  When do urges usually hit? Pick days and hours — during that window Home shows an extra shield with the panic tool front and centre.
+                </p>
+                <div className="flex gap-1.5">
+                  {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        const days = dangerDays.includes(i) ? dangerDays.filter((x) => x !== i) : [...dangerDays, i];
+                        setDangerDays(days);
+                        saveDangerHours(days, dangerFrom, dangerTo);
+                      }}
+                      className="mono h-10 flex-1 rounded-xl border text-[13px] font-bold transition"
+                      style={
+                        dangerDays.includes(i)
+                          ? { background: "var(--ember-soft)", borderColor: "var(--ember-soft-border)", color: "var(--ember-deep)" }
+                          : { background: "var(--surface)", borderColor: "var(--line)", color: "var(--muted)" }
+                      }
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <select
+                    value={dangerFrom}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setDangerFrom(v);
+                      saveDangerHours(dangerDays, v, dangerTo);
+                    }}
+                    className={inputCls + " flex-1"}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>
+                        from {String(i).padStart(2, "0")}:00
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={dangerTo}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setDangerTo(v);
+                      saveDangerHours(dangerDays, dangerFrom, v);
+                    }}
+                    className={inputCls + " flex-1"}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        to {String(i + 1).padStart(2, "0")}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </Card>
+
+              <Card className="mt-3 p-5">
                 {me && me.profile.relapses > 0 && (
                   <p className="mb-3 text-[12.5px]" style={{ color: "var(--muted)" }}>
                     Restarts so far: {me.profile.relapses}. Every restart is proof you keep coming back to the fight.
@@ -953,6 +1447,7 @@ export default function AppPage() {
       {/* PANIC OVERLAY */}
       {panic && (
         <PanicOverlay
+          reasons={reasons}
           onClose={(won) => {
             setPanic(false);
             if (won) logUrge("panic button");
@@ -1034,7 +1529,7 @@ export default function AppPage() {
 
 /* ---------------- panic overlay ---------------- */
 
-function PanicOverlay({ onClose }: { onClose: (won: boolean) => void }) {
+function PanicOverlay({ reasons, onClose }: { reasons: Reason[]; onClose: (won: boolean) => void }) {
   const [t, setT] = useState(60);
   const done = useRef(false);
 
@@ -1056,6 +1551,18 @@ function PanicOverlay({ onClose }: { onClose: (won: boolean) => void }) {
       <div className="mono text-[12px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--green)" }}>
         An urge lasts 15–20 minutes. This will pass.
       </div>
+      {reasons.length > 0 && (
+        <div className="mt-4 w-full max-w-sm rounded-2xl border p-4 text-left" style={{ borderColor: "var(--green-soft-border)", background: "var(--green-soft)" }}>
+          <div className="mono text-[10.5px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--green-deep)" }}>
+            You wrote this for exactly this moment:
+          </div>
+          {reasons.slice(0, 3).map((r) => (
+            <p key={r.id} className="mt-1.5 text-[14px] font-bold leading-snug" style={{ color: "var(--ink)" }}>
+              “{r.text}”
+            </p>
+          ))}
+        </div>
+      )}
       <div className="mono mt-3 text-[32px] font-semibold">{t === 0 ? "0:00 ✓" : `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`}</div>
       <div
         className="breathe my-7 flex h-32 w-32 flex-shrink-0 items-center justify-center rounded-full text-[15px] font-bold sm:h-40 sm:w-40"

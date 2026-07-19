@@ -37,6 +37,30 @@ export async function PUT(req: NextRequest) {
       fields.push("goal_amount = ?");
       args.push(body.goalAmount);
     }
+    if (typeof body.debtAmount === "number" && body.debtAmount >= 0 && body.debtAmount <= 100000000) {
+      fields.push("debt_amount = ?");
+      args.push(body.debtAmount);
+    }
+    if (typeof body.dangerHours === "string") {
+      let valid = body.dangerHours === "";
+      if (!valid) {
+        try {
+          const d = JSON.parse(body.dangerHours);
+          valid =
+            Array.isArray(d.days) &&
+            d.days.every((x: unknown) => typeof x === "number" && x >= 0 && x <= 6) &&
+            d.days.length <= 7 &&
+            typeof d.from === "number" && d.from >= 0 && d.from <= 23 &&
+            typeof d.to === "number" && d.to >= 1 && d.to <= 24 &&
+            d.from < d.to;
+        } catch {
+          valid = false;
+        }
+      }
+      if (!valid) return NextResponse.json({ error: "Invalid danger hours" }, { status: 400 });
+      fields.push("danger_hours = ?");
+      args.push(body.dangerHours.slice(0, 200));
+    }
     if (body.quitStart === "now") {
       fields.push("quit_start = COALESCE(quit_start, ?)");
       args.push(now);

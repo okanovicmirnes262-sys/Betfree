@@ -13,7 +13,7 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
     const profRes = await query({
-      sql: "SELECT weekly_spend, risk_score, quiz_done, quit_start, urges, currency, goal_name, goal_amount, relapses FROM profiles WHERE user_id = ?",
+      sql: "SELECT weekly_spend, risk_score, quiz_done, quit_start, urges, currency, goal_name, goal_amount, relapses, debt_amount, danger_hours FROM profiles WHERE user_id = ?",
       args: [session.userId],
     });
     const p = profRes.rows[0];
@@ -38,6 +38,8 @@ export async function GET() {
             goalName: String(p.goal_name || ""),
             goalAmount: Number(p.goal_amount || 0),
             relapses: Number(p.relapses || 0),
+            debtAmount: Number(p.debt_amount || 0),
+            dangerHours: String(p.danger_hours || ""),
           }
         : null,
     });
