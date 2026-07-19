@@ -11,18 +11,18 @@ export async function POST(req: NextRequest) {
     const pass = String(password || "");
 
     if (!cleanName || cleanName.length < 2)
-      return NextResponse.json({ error: "Unesi ime (barem 2 znaka)." }, { status: 400 });
+      return NextResponse.json({ error: "Enter your name (at least 2 characters)." }, { status: 400 });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail))
-      return NextResponse.json({ error: "Unesi ispravnu email adresu." }, { status: 400 });
+      return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
     if (pass.length < 8)
-      return NextResponse.json({ error: "Lozinka mora imati barem 8 znakova." }, { status: 400 });
+      return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
 
     const existing = await query({
       sql: "SELECT id FROM users WHERE email = ?",
       args: [cleanEmail],
     });
     if (existing.rows.length > 0)
-      return NextResponse.json({ error: "Račun s tim emailom već postoji. Prijavi se." }, { status: 409 });
+      return NextResponse.json({ error: "An account with this email already exists. Sign in instead." }, { status: 409 });
 
     const hash = await bcrypt.hash(pass, 10);
     const now = new Date().toISOString();
@@ -39,6 +39,6 @@ export async function POST(req: NextRequest) {
     await setSessionCookie({ userId, email: cleanEmail });
     return NextResponse.json({ ok: true, user: { id: userId, name: cleanName, email: cleanEmail } });
   } catch {
-    return NextResponse.json({ error: "Greška na serveru. Pokušaj ponovno." }, { status: 500 });
+    return NextResponse.json({ error: "Server error. Please try again." }, { status: 500 });
   }
 }

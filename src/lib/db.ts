@@ -21,6 +21,10 @@ const DDL = `
     quiz_done INTEGER NOT NULL DEFAULT 0,
     quit_start TEXT,
     urges INTEGER NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL DEFAULT 'EUR',
+    goal_name TEXT NOT NULL DEFAULT '',
+    goal_amount REAL NOT NULL DEFAULT 0,
+    relapses INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
@@ -46,6 +50,20 @@ async function initDb(): Promise<Client> {
   }
   for (const stmt of DDL.split(";").map((s) => s.trim()).filter(Boolean)) {
     await client.execute(stmt);
+  }
+  // migrations for databases created before these columns existed
+  const MIGRATIONS = [
+    "ALTER TABLE profiles ADD COLUMN currency TEXT NOT NULL DEFAULT 'EUR'",
+    "ALTER TABLE profiles ADD COLUMN goal_name TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE profiles ADD COLUMN goal_amount REAL NOT NULL DEFAULT 0",
+    "ALTER TABLE profiles ADD COLUMN relapses INTEGER NOT NULL DEFAULT 0",
+  ];
+  for (const m of MIGRATIONS) {
+    try {
+      await client.execute(m);
+    } catch {
+      // column already exists
+    }
   }
   return client;
 }

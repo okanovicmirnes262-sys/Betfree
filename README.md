@@ -1,36 +1,36 @@
-# BetFree — Prestani se kladiti
+# BetFree — Quit gambling for good
 
-Web aplikacija koja pomaže korisnicima da prestanu s klađenjem: test rizika od 10 pitanja, projekcija gubitka, brojač dana i ušteđenog novca uživo, panic button za trenutke poriva, dnevnik poriva i vodič za samoisključenje.
+A web app that helps people stop betting: a 10-question risk test, loss projection, live day counter and money-saved ticker, daily motivational messages, milestone badges, a savings goal, a panic button for urges, an urge journal with history & patterns, and a self-exclusion guide.
 
-## Tehnologije
+## Tech stack
 
 - **Next.js 16** (App Router) + React 19 + TypeScript
-- **Tailwind CSS 4** — svijetli, smirujući dizajn
-- **libSQL / SQLite** — baza korisnika i napretka (lokalna datoteka, spremna za [Turso](https://turso.tech) cloud)
-- **bcryptjs + jose** — sigurna prijava (hash lozinki + JWT sesija u httpOnly cookieju, traje 365 dana)
+- **Tailwind CSS 4** — light calming design with automatic dark mode + manual toggle
+- **libSQL / SQLite** — users and progress storage (local file, [Turso](https://turso.tech) cloud ready)
+- **bcryptjs + jose** — secure auth (password hashing + JWT session in an httpOnly cookie, 365-day persistent session)
 
-## Pokretanje
+## Getting started
 
 ```bash
 npm install
 npm run dev
 ```
 
-Aplikacija je na http://localhost:3000. Baza se automatski kreira u `data/betfree.db`.
+The app runs at http://localhost:3000. The database is created automatically at `data/betfree.db`.
 
-## Varijable okruženja (produkcija)
+## Environment variables (production)
 
-| Varijabla | Opis |
+| Variable | Description |
 |---|---|
-| `SESSION_SECRET` | Tajni ključ za potpisivanje sesija — obavezno postaviti u produkciji |
-| `TURSO_DATABASE_URL` | (opcionalno) URL Turso baze umjesto lokalne datoteke |
-| `TURSO_AUTH_TOKEN` | (opcionalno) Turso token |
+| `SESSION_SECRET` | Secret key for signing sessions — required in production |
+| `TURSO_DATABASE_URL` | (optional) Turso database URL instead of the local file |
+| `TURSO_AUTH_TOKEN` | (optional) Turso auth token |
 
-## Struktura
+## Structure
 
-- `/login` — prijava i registracija (email + lozinka, social gumbi pripremljeni)
-- `/app` — zaštićena aplikacija: quiz → rezultat → dashboard (streak, ušteda, panic button, dnevnik poriva, samoisključenje, stručna pomoć)
-- `/api/auth/*` — registracija, prijava, odjava
-- `/api/me`, `/api/profile`, `/api/urges` — korisnički podaci i napredak vezani uz račun
+- `/login` — sign in & sign up (email + password; Google/Apple buttons prepared)
+- `/app` — protected app: quiz → result → dashboard (streak, savings, daily motivation, milestones, savings goal, panic button, urge journal & history, self-exclusion, professional help, compassionate relapse reset)
+- `/api/auth/*` — register, login, logout
+- `/api/me`, `/api/profile`, `/api/urges` — per-account user data and progress (currency, goal, relapses, urge history)
 
-> BetFree nije zamjena za stručnu pomoć kod problematičnog kockanja.
+> BetFree is not a substitute for professional help with problem gambling.

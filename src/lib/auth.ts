@@ -52,7 +52,7 @@ export async function clearSessionCookie() {
 export async function requireAuth() {
   const session = await getSession();
   if (!session) {
-    throw new Response(JSON.stringify({ error: "Niste prijavljeni" }), {
+    throw new Response(JSON.stringify({ error: "Not signed in" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
     });
