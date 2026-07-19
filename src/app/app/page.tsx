@@ -251,6 +251,7 @@ export default function AppPage() {
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [newPost, setNewPost] = useState("");
   const [postErr, setPostErr] = useState("");
+  const [retryUntil, setRetryUntil] = useState(0);
   const [hiddenPosts, setHiddenPosts] = useState<number[]>([]);
   const [debtAmount, setDebtAmount] = useState(0);
   const [dangerDays, setDangerDays] = useState<number[]>([]);
@@ -475,6 +476,8 @@ export default function AppPage() {
     if (r?.ok) {
       setNewPost("");
       setPosts(null); // refetch
+    } else if (r?.retryIn) {
+      setRetryUntil(Date.now() + r.retryIn * 1000);
     } else {
       setPostErr(r?.error || "Could not post. Try again.");
     }
@@ -1073,17 +1076,27 @@ export default function AppPage() {
                   </span>
                   <button
                     onClick={submitPost}
-                    disabled={!newPost.trim()}
+                    disabled={!newPost.trim() || retryUntil > 0}
                     className="rounded-full px-5 py-2 text-[13px] font-extrabold text-white disabled:opacity-40"
                     style={{ background: "linear-gradient(135deg, var(--green), var(--green-deep))" }}
                   >
                     Share
                   </button>
                 </div>
-                {postErr && (
-                  <p className="animate-rise mt-2 text-[12.5px] font-bold" style={{ color: "var(--ember-deep)" }}>
-                    {postErr}
-                  </p>
+                {retryUntil > 0 ? (
+                  <CooldownMsg
+                    until={retryUntil}
+                    onDone={() => {
+                      setRetryUntil(0);
+                      setPostErr("");
+                    }}
+                  />
+                ) : (
+                  postErr && (
+                    <p className="animate-rise mt-2 text-[12.5px] font-bold" style={{ color: "var(--ember-deep)" }}>
+                      {postErr}
+                    </p>
+                  )
                 )}
               </Card>
 
@@ -1582,6 +1595,26 @@ export default function AppPage() {
 }
 
 /* ---------------- panic overlay ---------------- */
+
+function CooldownMsg({ until, onDone }: { until: number; onDone: () => void }) {
+  const [left, setLeft] = useState(() => Math.max(0, Math.ceil((until - Date.now()) / 1000)));
+  useEffect(() => {
+    const id = setInterval(() => {
+      const l = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+      setLeft(l);
+      if (l <= 0) {
+        clearInterval(id);
+        onDone();
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [until, onDone]);
+  return (
+    <p className="animate-rise mt-2 text-[12.5px] font-bold" style={{ color: "var(--amber-text)" }}>
+      You can post again in {left}s.
+    </p>
+  );
+}
 
 function LiveStreak({ quitStart }: { quitStart: number }) {
   const [t, setT] = useState(() => Date.now());
